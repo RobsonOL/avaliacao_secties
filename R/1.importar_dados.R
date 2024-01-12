@@ -54,10 +54,6 @@ teses_dissertacoes_2010_2012 <- list.files(path = PATH_DISSERTACOES,
          locale = locale(encoding = 'latin5'),
          col_types = cols(.default = "c"))
 
-teses_dissertacoes_2010_2012 |> sample_n(1000) |> View()
-teses_dissertacoes_2010_2012 |> group_by(AnoBase, Uf) |> count() |> View()
-teses_dissertacoes_2013_2020 |> group_by(AN_BASE, SG_UF_IES) |> count() |> View()
-
 
 teses_dissertacoes_2010_2012 <- teses_dissertacoes_2010_2012 |> 
   rename(AN_BASE = AnoBase,
@@ -99,7 +95,13 @@ teses_dissertacoes_2013_2020 <- teses_dissertacoes_2013_2020 |>
                                      locale = Sys.setlocale("LC_TIME", "en")))) 
 
 teses_dissertacoes <- teses_dissertacoes_2013_2020 |> 
-  bind_rows(teses_dissertacoes_2010_2012)
+  bind_rows(teses_dissertacoes_2010_2012) |> 
+  rename(ANO = AN_BASE) |> 
+  mutate(across(c(starts_with(c("AN", "ID", "CD", "NR")), 
+                  -NR_CPF, -CD_PROGRAMA),as.numeric)) 
+
+  
+
 
 teses_dissertacoes |> write_rds(paste0(PATH_DADOS, "teses_dissertacoes.rds"))
 
@@ -206,12 +208,42 @@ discentes_pb |> write_rds("dados/tidy/discentes_pb.rds")
 
 
 ##### Teses e Dissertações da Paraíba ---------------------
-teses_dissertacoes |> sample_n(100)
-
-
 teses_dissertacoes_pb <- teses_dissertacoes |> 
+  # Filtrar para teses na Paraíba
   filter(SG_UF_IES == "PB") |> 
-  rename(ANO = AN_BASE)
+  # Remover colunas que só foram adicionadas a partir de 2012
+  select(-c(ID_ADD_PRODUCAO_INTELECTUAL, ID_PRODUCAO_INTELECTUAL,
+            ID_SUBTIPO_PRODUCAO, NM_SUBTIPO_PRODUCAO,
+            ID_AREA_CONCENTRACAO, NM_AREA_CONCENTRACAO,
+            ID_LINHA_PESQUISA, NM_LINHA_PESQUISA,
+            ID_PROJETO, NM_PROJETO, DH_INICIO_AREA_CONC, DH_FIM_AREA_CONC,
+            DH_INICIO_LINHA, DH_FIM_LINHA, DS_ABSTRACT,
+            DS_KEYWORD, IN_TRABALHO_MESMA_AREA, NM_TP_VINCULO,
+            IN_ORIENT_PARTICIPOU_BANCA, ID_TP_EXPECTATIVA_ATUACAO,
+            ID_GRAU_ACADEMICO, DS_CATEGORIA_ORIENTADOR, NM_UF_IES,
+            CD_SUBAREA_CONHECIMENTO, CD_ESPECIALIDADE, NM_ESPECIALIDADE,
+            DS_URL_TEXTO_COMPLETO, IN_TCC_COM_VINCULO_PRODUCAO, 
+            ID_ADD_PRODUCAO_VINCULO_CT)) |> 
+  relocate(NM_DISCENTE, .after = ANO) |> 
+  relocate(NR_CPF, .after = NM_DISCENTE) |> 
+  relocate(NM_ORIENTADOR, .after = NR_CPF) |>
+  relocate(NM_PRODUCAO, .after = NM_ORIENTADOR) |> 
+  rename(ID_PESSOA = ID_PESSOA_DISCENTE) |> 
+  mutate(SG_ENTIDADE_ENSINO = case_match(SG_ENTIDADE_ENSINO,
+                                         "UFPB/J.P." ~ "UFPB-JP",
+                                         "UFPB/RT" ~ "UFPB-RT",
+                                         "UFPB/AREIA" ~ "UFPB-AREIA",
+                                         .default = SG_ENTIDADE_ENSINO)) |> 
+  mutate(NM_GRAU_ACADEMICO = case_match(NM_GRAU_ACADEMICO,
+                                         "Mestrado" ~ "MESTRADO",
+                                         "Doutorado" ~ "DOUTORADO",
+                                         "Profissionalizante" ~ "MESTRADO PROFISSIONAL",
+                                         .default = NM_GRAU_ACADEMICO)) 
+
+
+
+teses_dissertacoes_pb |> group_by(NM_GRANDE_AREA_CONHECIMENTO) |> count() |> arrange(desc(n))
+
 teses_dissertacoes_pb |> write_rds("dados/tidy/teses_dissertacoes_pb.rds")
 
 
