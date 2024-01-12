@@ -121,6 +121,20 @@ bolsas_programa <- list.files(path = PATH_BOLSAS,
          locale = locale(encoding = 'latin5'),
          col_types = cols(.default = "c"))
 
+
+bolsas_programa <- bolsas_programa |> 
+  rename(ANO = AN_REFERENCIA) |> 
+  rename(NM_DISCENTE = NM_BOLSISTA) |> 
+  mutate(across(where(is.character), ~ na_if(., "NI"))) |> 
+  mutate(across(c(ANO, ID_PESSOA, CD_IES_ESTUDO, 
+                  # CD_CONCEITO_ANO,
+                  CD_AREA_AVALIACAO, QT_BOLSA_ANO,
+                  QT_TAXA_ANO, CD_IES_ORIGEM), as.numeric)) |> 
+  mutate(VL_BOLSA_ANO = parse_number(VL_BOLSA_ANO)) |>
+  mutate(VL_TAXA_ANO = parse_number(VL_TAXA_ANO)) |> 
+  relocate(NM_DISCENTE, .after = ANO) 
+  
+
 bolsas_programa |> write_rds(paste0(PATH_DADOS, "bolsas_programas.rds"))
 
 
@@ -248,12 +262,9 @@ teses_dissertacoes_pb |> write_rds("dados/tidy/teses_dissertacoes_pb.rds")
 
 
 ##### Bolsas da Paraíba ---------------------
-bolsas <- bolsas |> 
-  mutate(across(c(ID_PESSOA, AN_REFERENCIA), as.numeric)) |> 
-  rename(ANO = AN_REFERENCIA)
-
-bolsas_pb <- bolsas |> 
+bolsas_pb <- bolsas_programa |> 
   filter(SG_UF_IES_ESTUDO == "PB")
+
 bolsas_pb |> write_rds("dados/tidy/bolsas_pb.rds")
 
 
