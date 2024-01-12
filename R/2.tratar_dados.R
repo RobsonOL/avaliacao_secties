@@ -56,8 +56,7 @@ bolsas <- bolsas |>
 
 ##### JOIN
 discentes_pb |> 
-  left_join(bolsas, by = c("NM_DISCENTE" = "NM_BOLSISTA", 
-                           "ANO")) |> View()
+  left_join(bolsas, by = c("NM_DISCENTE" = "NM_BOLSISTA", "ANO")) |> View()
 
 discentes_pb |> 
   filter(NM_DISCENTE == "ROBSON OLIVEIRA LIMA") |> View()

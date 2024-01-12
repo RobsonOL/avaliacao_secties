@@ -1,8 +1,8 @@
-#### Packages -----------
+#### 1. Packages -----------
 rm(list = ls())
 needs::needs(tidyverse, vroom)
 
-#### DADOS -------------
+#### 2. DADOS -------------
 
 # Quantidade de bolsas por programa de Pós-Graduação ---------------------------
 quantidade_bolsas <- list.files(path = "dados/brutos/concessao/", pattern = "*.zip", full.names = TRUE) |> 
@@ -114,7 +114,7 @@ autor_producao_periodicos <- list.files(path = "dados/brutos/producao_autor/",
 
 autor_producao_periodicos |> write_rds("dados/brutos/autor_producao_periodicos.rds")
 
-# Bolsas de Mobilidade Internacional -----------------------------------------
+######## Bolsas de Mobilidade Internacional -----------------------------
 bolsas_mobilidade <- list.files(path = "dados/brutos/bolsas_mobilidade_internacional/",
                                  pattern = "*.zip",
                                  full.names = TRUE) |>
@@ -123,3 +123,52 @@ bolsas_mobilidade <- list.files(path = "dados/brutos/bolsas_mobilidade_internaci
          col_types = cols(.default = "c"))
 
 bolsas_mobilidade |> write_rds("dados/brutos/bolsas_mobilidade.rds")
+
+
+
+#### 3. FILTRAR PARA PARAÍBA -----------------------
+
+discentes_pb <- discentes |> 
+  # SG_UF_PROGRAMA == "PB" substituiu SG_UF_ENTIDADE_ENSINO em 2012
+  mutate(SG_UF_PROGRAMA = if_else(
+    is.na(SG_UF_PROGRAMA), SG_UF_ENTIDADE_ENSINO, SG_UF_PROGRAMA)) |> 
+  filter(SG_UF_PROGRAMA == "PB") |> 
+  mutate(across(c(AN_BASE, CD_AREA_AVALIACAO, AN_NASCIMENTO_DISCENTE,
+                  CD_ENTIDADE_CAPES, CD_CONCEITO_PROGRAMA, CD_CONCEITO_CURSO,
+                  ID_PESSOA, QT_MES_TITULACAO), as.numeric)) |> 
+  mutate(across(c(DT_MATRICULA_DISCENTE), parse_date_time, "%d%b%y:%H:%M:%S")) |>
+  mutate(IDADE = AN_BASE - AN_NASCIMENTO_DISCENTE) |>
+  select(AN_BASE, NM_DISCENTE, ID_PESSOA, NR_DOCUMENTO_DISCENTE, 
+         NM_PAIS_NACIONALIDADE_DISCENTE, IDADE, NM_SITUACAO_DISCENTE, 
+         DS_GRAU_ACADEMICO_DISCENTE, DT_MATRICULA_DISCENTE, QT_MES_TITULACAO,
+         SG_ENTIDADE_ENSINO, SG_UF_PROGRAMA,
+         CD_PROGRAMA_IES, NM_GRANDE_AREA_CONHECIMENTO,
+         CD_ENTIDADE_CAPES, NM_PROGRAMA_IES, NM_MODALIDADE_PROGRAMA, 
+         NM_GRAU_PROGRAMA, NM_MUNICIPIO_PROGRAMA_IES, CD_CONCEITO_PROGRAMA, 
+         CD_CONCEITO_PROGRAMA) |> 
+  mutate(across(where(is.character), ~ na_if(., "NÃO SE APLICA"))) |> 
+  rename(ANO = AN_BASE)
+
+discentes_pb |> write_rds("dados/tidy/discentes_pb.rds")
+# discentes_pb |> skimr::skim()
+
+
+
+##### TESES E DISSERTAÇÕES PARAÍBA ---------------------
+teses_dissertacoes_pb <- teses_dissertacoes |> 
+  filter(SG_UF_IES == "PB") |> 
+  rename(ANO = AN_BASE)
+teses_dissertacoes_pb |> write_rds("dados/tidy/teses_dissertacoes_pb.rds")
+
+
+
+##### BOLSAS  DA PARAÍBA ---------------------
+bolsas <- bolsas |> 
+  mutate(across(c(ID_PESSOA, AN_REFERENCIA), as.numeric)) |> 
+  rename(ANO = AN_REFERENCIA)
+
+bolsas_pb <- bolsas |> 
+  filter(SG_UF_IES_ESTUDO == "PB")
+bolsas_pb |> write_rds("dados/tidy/bolsas_pb.rds")
+
+
