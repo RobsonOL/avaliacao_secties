@@ -1,19 +1,24 @@
-#### 1. Packages -----------
+# 1. PACKAGES -----------
 rm(list = ls())
 library(vroom)
 library(skimr)
 library(tidyverse)
 
-#### 2. DADOS -------------
 
-# Quantidade de bolsas por programa de Pós-Graduação ---------------------------
-quantidade_bolsas <- list.files(path = "dados/brutos/concessao/", pattern = "*.zip", full.names = TRUE) |> 
+
+
+# 2. DADOS -------------
+
+##### Quantidade de bolsas por programa de Pós-Graduação ---------------------------
+quantidade_bolsas <- list.files(path = "dados/brutos/concessao/", 
+                                pattern = "*.zip", full.names = TRUE) |> 
   map_df(read_csv, locale = locale(encoding = 'latin5'))
 
 quantidade_bolsas |> write_rds("dados/brutos/quantidade_bolsas.rds")
 
 
-# InformaÃ§Ãµes dos discentes de Pós-Graduação -----------------------------------
+
+##### Informações dos discentes de Pós-Graduação -----------------------------------
 # https://dadosabertos.capes.gov.br/dataset/discentes-da-pos-graduacao-stricto-sensu-do-brasil-2017-a-2019
 
 # White screen do RSTUDIO por incluir dados tão grandes no projeto (????)
@@ -26,7 +31,7 @@ discentes <- list.files(path = PATH_DISCENTES,
 discentes |> write_rds("C:/Users/robso/OneDrive/Avaliação SECTIES/bruto/discentes.rds")
 
 
-# ProduÃ§Ã£o de artigos em periÃ³dicos --------------------------------------------
+##### Produção de artigos em periódicos --------------------------------------------
 # https://dadosabertos.capes.gov.br/dataset/2017-a-2020-producao-intelectual-de-pos-graduacao-stricto-sensu-no-brasil
 producao_artigos_periodicos <- list.files(path = "dados/brutos/producao/",
                                           pattern = "artpe",
@@ -38,7 +43,7 @@ producao_artigos_periodicos <- list.files(path = "dados/brutos/producao/",
 producao_artigos_periodicos |> write_rds("dados/brutos/producao_artigos_periodicos.rds")
 
 
-# Teses e dissertaÃ§Ãµes de discentes de Pós-Graduação ---------------------------
+##### Teses e dissertaÃ§Ãµes de discentes de Pós-Graduação ---------------------------
 # https://dadosabertos.capes.gov.br/dataset/2017-2020-catalogo-de-teses-e-dissertacoes-da-capes
 teses_dissertacoes_2013_2020 <- list.files(path = "dados/bruto/teses_dissertacoes/",
                                  pattern = "br-capes",
@@ -99,7 +104,7 @@ teses_dissertacoes <- teses_dissertacoes_2013_2020 |>
 
 teses_dissertacoes |> write_rds("dados/bruto/teses_dissertacoes.rds")
 
-# Bolsas de programas de Pós-Graduação -----------------------------------------
+##### Bolsas de programas de Pós-Graduação -----------------------------------------
 bolsas_programa <- list.files(path = "dados/brutos/bolsas_programas/",
                                  pattern = "*.zip",
                                  full.names = TRUE) |>
@@ -110,7 +115,7 @@ bolsas_programa <- list.files(path = "dados/brutos/bolsas_programas/",
 bolsas_programa |> write_rds("dados/brutos/bolsas_programas.rds")
 
 
-# Autor da ProduÃ§Ã£o de PeriÃ³dicos
+#####Autor da ProduÃ§Ã£o de PeriÃ³dicos -------
 autor_producao_periodicos <- list.files(path = "dados/brutos/producao_autor/",
                                  pattern = "*.zip",
                                  full.names = TRUE) |>
@@ -120,7 +125,7 @@ autor_producao_periodicos <- list.files(path = "dados/brutos/producao_autor/",
 
 autor_producao_periodicos |> write_rds("dados/brutos/autor_producao_periodicos.rds")
 
-######## Bolsas de Mobilidade Internacional -----------------------------
+##### Bolsas de Mobilidade Internacional -----------------------
 bolsas_mobilidade <- list.files(path = "dados/brutos/bolsas_mobilidade_internacional/",
                                  pattern = "*.zip",
                                  full.names = TRUE) |>
@@ -134,9 +139,9 @@ bolsas_mobilidade |> write_rds("dados/brutos/bolsas_mobilidade.rds")
 
 
 
+# 3. FILTRAR PARA PARAÍBA -----------------------
 
-#### 3. FILTRAR PARA PARAÍBA -----------------------
-
+##### Discentes -----------------------
 discentes_pb <- discentes |> 
   mutate(across(c(AN_BASE, CD_AREA_AVALIACAO, AN_NASCIMENTO_DISCENTE,
                   AN_MATRICULA_DISCENTE, ME_MATRICULA_DISCENTE,
@@ -193,7 +198,7 @@ discentes_pb <- discentes |>
 discentes_pb |> write_rds("dados/tidy/discentes_pb.rds")
 
 
-##### TESES E DISSERTAÇÕES PARAÍBA ---------------------
+##### Teses e Dissertações da Paraíba ---------------------
 teses_dissertacoes_pb <- teses_dissertacoes |> 
   filter(SG_UF_IES == "PB") |> 
   rename(ANO = AN_BASE)
@@ -201,7 +206,7 @@ teses_dissertacoes_pb |> write_rds("dados/tidy/teses_dissertacoes_pb.rds")
 
 
 
-##### BOLSAS  DA PARAÍBA ---------------------
+##### Bolsas da Paraíba ---------------------
 bolsas <- bolsas |> 
   mutate(across(c(ID_PESSOA, AN_REFERENCIA), as.numeric)) |> 
   rename(ANO = AN_REFERENCIA)
