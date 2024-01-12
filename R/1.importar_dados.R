@@ -14,10 +14,14 @@ quantidade_bolsas |> write_rds("dados/brutos/quantidade_bolsas.rds")
 # InformaÃ§Ãµes dos discentes de Pós-Graduação -----------------------------------
 # https://dadosabertos.capes.gov.br/dataset/discentes-da-pos-graduacao-stricto-sensu-do-brasil-2017-a-2019
 
-discentes <- list.files(path = "dados/brutos/discentes/", pattern = "*.zip", full.names = TRUE) |>  
+# White screen do RSTUDIO por incluir dados tão grandes no projeto (????)
+PATH_DISCENTES <- "C:/Users/robso/OneDrive/Avaliação SECTIES/bruto/discentes/"
+
+discentes <- list.files(path = PATH_DISCENTES, 
+                        pattern = "*.zip", full.names = TRUE) |>  
   map_df(vroom, delim = ";", locale = locale(encoding = 'latin5'), col_types = cols(.default = "c")) 
 
-discentes |> write_rds("dados/brutos/discentes.rds")
+discentes |> write_rds("C:/Users/robso/OneDrive/Avaliação SECTIES/bruto/discentes.rds")
 
 
 # ProduÃ§Ã£o de artigos em periÃ³dicos --------------------------------------------
@@ -126,7 +130,19 @@ bolsas_mobilidade |> write_rds("dados/brutos/bolsas_mobilidade.rds")
 
 
 
+
+
+
 #### 3. FILTRAR PARA PARAÍBA -----------------------
+
+x <- discentes |> group_by(AN_BASE) |> sample_n(100)
+
+x |>   
+  mutate(SG_UF_PROGRAMA = if_else(is.na(SG_UF_PROGRAMA), SG_UF_ENTIDADE_ENSINO, SG_UF_PROGRAMA)) |> 
+  # filter(AN_BASE %in% c(2012,2013)) |> 
+  filter(SG_UF_PROGRAMA == "PB") |> 
+  group_by(AN_BASE, SG_UF_ENTIDADE_ENSINO, SG_UF_PROGRAMA) |> count() |> View()
+
 
 discentes_pb <- discentes |> 
   # SG_UF_PROGRAMA == "PB" substituiu SG_UF_ENTIDADE_ENSINO em 2012
@@ -148,6 +164,9 @@ discentes_pb <- discentes |>
          CD_CONCEITO_PROGRAMA) |> 
   mutate(across(where(is.character), ~ na_if(., "NÃO SE APLICA"))) |> 
   rename(ANO = AN_BASE)
+
+discentes |> select(DT_MATRICULA_DISCENTE) |> sample_n(100) |> View()
+
 
 discentes_pb |> write_rds("dados/tidy/discentes_pb.rds")
 # discentes_pb |> skimr::skim()
