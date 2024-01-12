@@ -1,6 +1,8 @@
 #### 1. Packages -----------
 rm(list = ls())
-needs::needs(tidyverse, vroom)
+library(vroom)
+library(skimr)
+library(tidyverse)
 
 #### 2. DADOS -------------
 
@@ -135,42 +137,60 @@ bolsas_mobilidade |> write_rds("dados/brutos/bolsas_mobilidade.rds")
 
 #### 3. FILTRAR PARA PARAÍBA -----------------------
 
-x <- discentes |> group_by(AN_BASE) |> sample_n(100)
-
-x |>   
-  mutate(SG_UF_PROGRAMA = if_else(is.na(SG_UF_PROGRAMA), SG_UF_ENTIDADE_ENSINO, SG_UF_PROGRAMA)) |> 
-  # filter(AN_BASE %in% c(2012,2013)) |> 
-  filter(SG_UF_PROGRAMA == "PB") |> 
-  group_by(AN_BASE, SG_UF_ENTIDADE_ENSINO, SG_UF_PROGRAMA) |> count() |> View()
-
-
 discentes_pb <- discentes |> 
-  # SG_UF_PROGRAMA == "PB" substituiu SG_UF_ENTIDADE_ENSINO em 2012
-  mutate(SG_UF_PROGRAMA = if_else(
-    is.na(SG_UF_PROGRAMA), SG_UF_ENTIDADE_ENSINO, SG_UF_PROGRAMA)) |> 
-  filter(SG_UF_PROGRAMA == "PB") |> 
   mutate(across(c(AN_BASE, CD_AREA_AVALIACAO, AN_NASCIMENTO_DISCENTE,
-                  CD_ENTIDADE_CAPES, CD_CONCEITO_PROGRAMA, CD_CONCEITO_CURSO,
-                  ID_PESSOA, QT_MES_TITULACAO), as.numeric)) |> 
+                  AN_MATRICULA_DISCENTE, ME_MATRICULA_DISCENTE,
+                  ID_PESSOA), as.numeric)) |> 
+  select(AN_BASE, NM_DISCENTE, NR_DOCUMENTO_DISCENTE, ID_PESSOA,
+         AN_NASCIMENTO_DISCENTE, DT_MATRICULA_DISCENTE, AN_MATRICULA_DISCENTE, 
+         ME_MATRICULA_DISCENTE, NM_SITUACAO_DISCENTE, SG_ENTIDADE_ENSINO, 
+         NM_ENTIDADE_ENSINO, CS_STATUS_JURIDICO, SG_UF_ENTIDADE_ENSINO, SG_UF_PROGRAMA,
+         CD_PROGRAMA_IES, NM_PROGRAMA_IES, NM_MODALIDADE_PROGRAMA,
+         CD_AREA_AVALIACAO, NM_AREA_AVALIACAO, NM_NIVEL_TITULACAO_DISCENTE,
+         DS_GRAU_ACADEMICO_DISCENTE, NM_ORIENTADOR, NM_ORIENTADOR_PRINCIPAL,
+         NM_NIVEL_PROGRAMA, NM_GRAU_PROGRAMA) |> 
+  # SG_UF_PROGRAMA substituiu SG_UF_ENTIDADE_ENSINO em 2012
+  mutate(SG_UF_PROGRAMA = if_else(AN_BASE <= 2012,
+                                  SG_UF_ENTIDADE_ENSINO, 
+                                  SG_UF_PROGRAMA)) |> 
+  # FILTRAR PARA PARAÍBA
+  filter(SG_UF_PROGRAMA == "PB") |> 
+  # DT_MATRICULA_DISCENTE existe apenas a partir de 2013
   mutate(across(c(DT_MATRICULA_DISCENTE), parse_date_time, "%d%b%y:%H:%M:%S")) |>
+  mutate(DT_MATRICULA_DISCENTE = if_else(AN_BASE <= 2012, 
+                                         as.Date(paste0(AN_MATRICULA_DISCENTE, "-", ME_MATRICULA_DISCENTE, "-01")), 
+                                         DT_MATRICULA_DISCENTE)) |> 
   mutate(IDADE = AN_BASE - AN_NASCIMENTO_DISCENTE) |>
-  select(AN_BASE, NM_DISCENTE, ID_PESSOA, NR_DOCUMENTO_DISCENTE, 
-         NM_PAIS_NACIONALIDADE_DISCENTE, IDADE, NM_SITUACAO_DISCENTE, 
-         DS_GRAU_ACADEMICO_DISCENTE, DT_MATRICULA_DISCENTE, QT_MES_TITULACAO,
-         SG_ENTIDADE_ENSINO, SG_UF_PROGRAMA,
-         CD_PROGRAMA_IES, NM_GRANDE_AREA_CONHECIMENTO,
-         CD_ENTIDADE_CAPES, NM_PROGRAMA_IES, NM_MODALIDADE_PROGRAMA, 
-         NM_GRAU_PROGRAMA, NM_MUNICIPIO_PROGRAMA_IES, CD_CONCEITO_PROGRAMA, 
-         CD_CONCEITO_PROGRAMA) |> 
-  mutate(across(where(is.character), ~ na_if(., "NÃO SE APLICA"))) |> 
-  rename(ANO = AN_BASE)
+  # ORIENTADOR:
+  mutate(NM_ORIENTADOR = if_else(AN_BASE <= 2012,
+                                  NM_ORIENTADOR_PRINCIPAL, 
+                                 NM_ORIENTADOR)) |> 
+  # NIVEL DO PROGRAMA
+  mutate(NM_GRAU_PROGRAMA = if_else(AN_BASE <= 2012,
+                                 NM_NIVEL_PROGRAMA, 
+                                 NM_GRAU_PROGRAMA)) |> 
+  # NIVEL DE TITULACAO DO DISCENTE
+  mutate(DS_GRAU_ACADEMICO_DISCENTE = if_else(AN_BASE <= 2012,
+                                    NM_NIVEL_TITULACAO_DISCENTE, 
+                                    DS_GRAU_ACADEMICO_DISCENTE)) |> 
+  select(-c(NM_ORIENTADOR_PRINCIPAL, NM_NIVEL_PROGRAMA, AN_MATRICULA_DISCENTE,
+            ME_MATRICULA_DISCENTE, SG_UF_ENTIDADE_ENSINO,NM_NIVEL_TITULACAO_DISCENTE)) |> 
+  mutate(across(where(is.character), ~ na_if(., "NI"))) |> 
+  rename(ANO = AN_BASE) |> 
+  relocate(IDADE, .after = AN_NASCIMENTO_DISCENTE) |> 
+  mutate(SG_ENTIDADE_ENSINO = case_match(SG_ENTIDADE_ENSINO,
+                                         "UFPB/J.P." ~ "UFPB-JP",
+                                         "UFPB/RT" ~ "UFPB-RT",
+                                         "UFPB/AREIA" ~ "UFPB-AREIA",
+                                         .default = SG_ENTIDADE_ENSINO))
 
-discentes |> select(DT_MATRICULA_DISCENTE) |> sample_n(100) |> View()
-
+# discentes_pb |> filter(ANO %in% c(2012,2013)) |> group_by(ANO) |> sample_n(10) |> View()
+# discentes_pb |> skimr::skim()
+# discentes_pb |> group_by(NM_SITUACAO_DISCENTE) |> count() |> arrange(desc(n)) 
+# discentes_pb |> group_by(NM_ENTIDADE_ENSINO) |> count() |> arrange(desc(n)) 
+# discentes_pb |> group_by(NM_GRAU_PROGRAMA) |> count() |> arrange(desc(n)) 
 
 discentes_pb |> write_rds("dados/tidy/discentes_pb.rds")
-# discentes_pb |> skimr::skim()
-
 
 
 ##### TESES E DISSERTAÇÕES PARAÍBA ---------------------
