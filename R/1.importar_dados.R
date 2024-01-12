@@ -8,27 +8,20 @@ library(tidyverse)
 
 
 # 2. DADOS -------------
-
-##### Quantidade de bolsas por programa de Pós-Graduação ---------------------------
-quantidade_bolsas <- list.files(path = "dados/brutos/concessao/", 
-                                pattern = "*.zip", full.names = TRUE) |> 
-  map_df(read_csv, locale = locale(encoding = 'latin5'))
-
-quantidade_bolsas |> write_rds("dados/brutos/quantidade_bolsas.rds")
-
+# White screen do RSTUDIO por incluir dados tão grandes na pasta do projeto (????)
+PATH_DADOS <- "C:/Users/robso/OneDrive/Avaliação SECTIES/bruto/"
 
 
 ##### Informações dos discentes de Pós-Graduação -----------------------------------
 # https://dadosabertos.capes.gov.br/dataset/discentes-da-pos-graduacao-stricto-sensu-do-brasil-2017-a-2019
 
-# White screen do RSTUDIO por incluir dados tão grandes no projeto (????)
-PATH_DISCENTES <- "C:/Users/robso/OneDrive/Avaliação SECTIES/bruto/discentes/"
+PATH_DISCENTES <- paste0(PATH_DADOS, "discentes/")
 
 discentes <- list.files(path = PATH_DISCENTES, 
                         pattern = "*.zip", full.names = TRUE) |>  
   map_df(vroom, delim = ";", locale = locale(encoding = 'latin5'), col_types = cols(.default = "c")) 
 
-discentes |> write_rds("C:/Users/robso/OneDrive/Avaliação SECTIES/bruto/discentes.rds")
+discentes |> write_rds(paste0(PATH_DADOS, "discentes.rds"))
 
 
 ##### Produção de artigos em periódicos --------------------------------------------
@@ -43,21 +36,27 @@ producao_artigos_periodicos <- list.files(path = "dados/brutos/producao/",
 producao_artigos_periodicos |> write_rds("dados/brutos/producao_artigos_periodicos.rds")
 
 
-##### Teses e dissertaÃ§Ãµes de discentes de Pós-Graduação ---------------------------
+##### Teses e dissertações de discentes de Pós-Graduação ---------------------------
 # https://dadosabertos.capes.gov.br/dataset/2017-2020-catalogo-de-teses-e-dissertacoes-da-capes
-teses_dissertacoes_2013_2020 <- list.files(path = "dados/bruto/teses_dissertacoes/",
+PATH_DISSERTACOES = paste0(PATH_DADOS, "teses_dissertacoes/")
+  
+teses_dissertacoes_2013_2020 <- list.files(path = PATH_DISSERTACOES,
                                  pattern = "br-capes",
                                  full.names = TRUE) |>
   map_df(read_csv2,
          locale = locale(encoding = 'latin5'),
          col_types = cols(.default = "c"))
 
-teses_dissertacoes_2010_2012 <- list.files(path = "dados/bruto/teses_dissertacoes/",
+teses_dissertacoes_2010_2012 <- list.files(path = PATH_DISSERTACOES,
                                            pattern = "dados_",
                                            full.names = TRUE) |>
   map_df(read_csv2,
          locale = locale(encoding = 'latin5'),
          col_types = cols(.default = "c"))
+
+teses_dissertacoes_2010_2012 |> sample_n(1000) |> View()
+teses_dissertacoes_2010_2012 |> group_by(AnoBase, Uf) |> count() |> View()
+teses_dissertacoes_2013_2020 |> group_by(AN_BASE, SG_UF_IES) |> count() |> View()
 
 
 teses_dissertacoes_2010_2012 <- teses_dissertacoes_2010_2012 |> 
@@ -85,7 +84,8 @@ teses_dissertacoes_2010_2012 <- teses_dissertacoes_2010_2012 |>
          DS_RESUMO = ResumoTese,
          NM_LINHA_PESQUISA = LinhaPesquisa,
          DS_URL_TEXTO_COMPLETO = URLTextoCompleto,
-         NM_ORIENTADOR = Orientador_1
+         NM_ORIENTADOR = Orientador_1,
+         NR_CPF = DocumentoDiscente
          ) |> 
   select(-starts_with("Documento"), -starts_with("Orientador"),
          -starts_with("CoOrientador"), -`%PDF-1.4`) |> 
@@ -101,18 +101,25 @@ teses_dissertacoes_2013_2020 <- teses_dissertacoes_2013_2020 |>
 teses_dissertacoes <- teses_dissertacoes_2013_2020 |> 
   bind_rows(teses_dissertacoes_2010_2012)
 
+teses_dissertacoes |> write_rds(paste0(PATH_DADOS, "teses_dissertacoes.rds"))
 
-teses_dissertacoes |> write_rds("dados/bruto/teses_dissertacoes.rds")
+
+
+
+
 
 ##### Bolsas de programas de Pós-Graduação -----------------------------------------
-bolsas_programa <- list.files(path = "dados/brutos/bolsas_programas/",
+PATH_BOLSAS = paste0(PATH_DADOS, "bolsas_programas/")
+
+
+bolsas_programa <- list.files(path = PATH_BOLSAS,
                                  pattern = "*.zip",
                                  full.names = TRUE) |>
   map_df(read_csv2,
          locale = locale(encoding = 'latin5'),
          col_types = cols(.default = "c"))
 
-bolsas_programa |> write_rds("dados/brutos/bolsas_programas.rds")
+bolsas_programa |> write_rds(paste0(PATH_DADOS, "bolsas_programas.rds"))
 
 
 #####Autor da ProduÃ§Ã£o de PeriÃ³dicos -------
@@ -123,7 +130,7 @@ autor_producao_periodicos <- list.files(path = "dados/brutos/producao_autor/",
          locale = locale(encoding = 'latin5'),
          col_types = cols(.default = "c"))
 
-autor_producao_periodicos |> write_rds("dados/brutos/autor_producao_periodicos.rds")
+autor_producao_periodicos |> write_rds(paste0(PATH_DADOS, "autor_producao_periodicos.rds"))
 
 ##### Bolsas de Mobilidade Internacional -----------------------
 bolsas_mobilidade <- list.files(path = "dados/brutos/bolsas_mobilidade_internacional/",
@@ -133,7 +140,7 @@ bolsas_mobilidade <- list.files(path = "dados/brutos/bolsas_mobilidade_internaci
          locale = locale(encoding = 'latin5'),
          col_types = cols(.default = "c"))
 
-bolsas_mobilidade |> write_rds("dados/brutos/bolsas_mobilidade.rds")
+bolsas_mobilidade |> write_rds(paste0(PATH_DADOS, "bolsas_mobilidade.rds"))
 
 
 
@@ -199,11 +206,13 @@ discentes_pb |> write_rds("dados/tidy/discentes_pb.rds")
 
 
 ##### Teses e Dissertações da Paraíba ---------------------
+teses_dissertacoes |> sample_n(100)
+
+
 teses_dissertacoes_pb <- teses_dissertacoes |> 
   filter(SG_UF_IES == "PB") |> 
   rename(ANO = AN_BASE)
 teses_dissertacoes_pb |> write_rds("dados/tidy/teses_dissertacoes_pb.rds")
-
 
 
 ##### Bolsas da Paraíba ---------------------
