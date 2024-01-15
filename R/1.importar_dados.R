@@ -294,4 +294,24 @@ artigos_autor |> group_by(TP_AUTOR) |> count()
 # discentes_pb <- read_rds("dados/tidy/discentes_pb.rds")
 
 artigos_autor |> 
-  filter(NM_AUTOR %in% discentes_pb$NM_DISCENTE)
+  filter(NM_AUTOR %in% discentes_pb$NM_DISCENTE) |> 
+  group_by(ID_PESSOA_DISCENTE) |> 
+  summarise(
+    publicacoes = n()
+  )
+
+
+autor_id <- autor_producao_periodicos |> 
+  sample_n(1000) |> 
+  select(NM_AUTOR, starts_with("ID_PESSOA")) |> 
+  mutate(across(starts_with("ID_PESSOA"), as.numeric)) |> 
+  mutate(across(starts_with("ID_PESSOA"), ~ ifelse(is.na(.), 0, 1),
+                .names = "{sub('ID_PESSOA_', '', .col)}")) |> 
+  mutate(ID_PESSOA = coalesce(ID_PESSOA_DISCENTE, ID_PESSOA_DOCENTE, 
+                              ID_PESSOA_EGRESSO, ID_PESSOA_POS_DOC, 
+                              ID_PESSOA_PART_EXTERNO)) |> 
+  select(NM_AUTOR, ID_PESSOA, DISCENTE, DOCENTE, PART_EXTERNO, EGRESSO, POS_DOC) 
+
+
+autor_id |> group_by(NM_AUTOR) |> count() |> arrange(desc(n))
+autor_id |> filter(NM_AUTOR == 'ALEX SANDRO ROLLAND DE SOUZA')
