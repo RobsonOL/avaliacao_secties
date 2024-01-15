@@ -9,7 +9,8 @@ library(tidyverse)
 
 # 2. DADOS -------------
 # White screen do RSTUDIO por incluir dados tão grandes na pasta do projeto (????)
-PATH_DADOS <- "C:/Users/robso/OneDrive/Avaliação SECTIES/bruto/"
+# PATH_DADOS <- "C:/Users/robso/OneDrive/Avaliação SECTIES/bruto/"
+PATH_DADOS <- "dados/bruto"
 
 
 ##### Informações dos discentes de Pós-Graduação -----------------------------------
@@ -26,6 +27,7 @@ discentes |> write_rds(paste0(PATH_DADOS, "discentes.rds"))
 
 ##### Produção de artigos em periódicos --------------------------------------------
 # https://dadosabertos.capes.gov.br/dataset/2017-a-2020-producao-intelectual-de-pos-graduacao-stricto-sensu-no-brasil
+
 producao_artigos_periodicos <- list.files(path = "dados/brutos/producao/",
                                           pattern = "artpe",
                                           full.names = TRUE) |>
