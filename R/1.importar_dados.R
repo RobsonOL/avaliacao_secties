@@ -8,7 +8,7 @@ library(tidyverse)
 
 
 # 2. DADOS -------------
-# White screen do RSTUDIO por incluir dados tão grandes na pasta do projeto (????)
+
 # PATH_DADOS <- "C:/Users/robso/OneDrive/Avaliação SECTIES/bruto/"
 PATH_DADOS <- "dados/bruto"
 
@@ -25,17 +25,6 @@ discentes <- list.files(path = PATH_DISCENTES,
 discentes |> write_rds(paste0(PATH_DADOS, "discentes.rds"))
 
 
-##### Produção de artigos em periódicos --------------------------------------------
-# https://dadosabertos.capes.gov.br/dataset/2017-a-2020-producao-intelectual-de-pos-graduacao-stricto-sensu-no-brasil
-
-producao_artigos_periodicos <- list.files(path = "dados/brutos/producao/",
-                                          pattern = "artpe",
-                                          full.names = TRUE) |>
-  map_df(read_csv2,
-         locale = locale(encoding = 'latin5'),
-         col_types = cols(.default = "c"))
-
-producao_artigos_periodicos |> write_rds("dados/brutos/producao_artigos_periodicos.rds")
 
 
 ##### Teses e dissertações de discentes de Pós-Graduação ---------------------------
@@ -140,11 +129,33 @@ bolsas_programa <- bolsas_programa |>
 bolsas_programa |> write_rds(paste0(PATH_DADOS, "bolsas_programas.rds"))
 
 
-#####Autor da ProduÃ§Ã£o de PeriÃ³dicos -------
-autor_producao_periodicos <- list.files(path = "dados/brutos/producao_autor/",
+
+
+
+##### Produção de artigos em periódicos --------------------------------------------
+# https://dadosabertos.capes.gov.br/dataset/2017-a-2020-producao-intelectual-de-pos-graduacao-stricto-sensu-no-brasil
+PATH_PERIODICOS = paste0(PATH_DADOS, "producao/")
+
+producao_artigos_periodicos <- list.files(path = PATH_PERIODICOS,
+                                          pattern = "artpe",
+                                          full.names = TRUE) |>
+  map_df(vroom, delim = ";",
+         locale = locale(encoding = 'latin5'),
+         col_types = cols(.default = "c"))
+
+producao_artigos_periodicos |> write_rds(paste0(PATH_DADOS, "producao_artigos_periodicos.rds"))
+
+
+##### Autor da Produção de Periódicos -------
+# https://dadosabertos.capes.gov.br/dataset/2017-a-2020-autor-da-producao-intelectual-de-programas-de-pos-graduacao-stricto-sensu
+
+PATH_AUTOR_PERIODICOS <- paste0(PATH_DADOS, "producao_autor/")
+
+
+autor_producao_periodicos <- list.files(path = PATH_AUTOR_PERIODICOS,
                                  pattern = "*.zip",
                                  full.names = TRUE) |>
-  map_df(read_csv2,
+  map_df(vroom, delim = ";",
          locale = locale(encoding = 'latin5'),
          col_types = cols(.default = "c"))
 
@@ -214,18 +225,12 @@ discentes_pb <- discentes |>
                                          "UFPB/AREIA" ~ "UFPB-AREIA",
                                          .default = SG_ENTIDADE_ENSINO))
 
-# discentes_pb |> filter(ANO %in% c(2012,2013)) |> group_by(ANO) |> sample_n(10) |> View()
-# discentes_pb |> skimr::skim()
-# discentes_pb |> group_by(NM_SITUACAO_DISCENTE) |> count() |> arrange(desc(n)) 
-# discentes_pb |> group_by(NM_ENTIDADE_ENSINO) |> count() |> arrange(desc(n)) 
-# discentes_pb |> group_by(NM_GRAU_PROGRAMA) |> count() |> arrange(desc(n)) 
-
 discentes_pb |> write_rds("dados/tidy/discentes_pb.rds")
 
 
 ##### Teses e Dissertações da Paraíba ---------------------
+
 teses_dissertacoes_pb <- teses_dissertacoes |> 
-  # Filtrar para teses na Paraíba
   filter(SG_UF_IES == "PB") |> 
   # Remover colunas que só foram adicionadas a partir de 2012
   select(-c(ID_ADD_PRODUCAO_INTELECTUAL, ID_PRODUCAO_INTELECTUAL,
@@ -270,3 +275,16 @@ bolsas_pb <- bolsas_programa |>
 bolsas_pb |> write_rds("dados/tidy/bolsas_pb.rds")
 
 
+##### Produção Intelectual da Paraíba ---------------------
+
+# Apenas produções declaradas. Não contém todas as produções. 
+# Exemplo: após estudante se desvincular do programa.
+artigos_autor <- producao_artigos_periodicos |> 
+  select(ID_ADD_PRODUCAO_INTELECTUAL, NM_PRODUCAO, 
+         NM_SUBTIPO_PRODUCAO, NM_AREA_CONCENTRACAO,
+         SG_ESTRATO, DS_TITULO_PADRONIZADO, CD_IDENTIFICADOR_VEICULO) |> 
+  left_join(autor_producao_periodicos |> 
+              select(ID_ADD_PRODUCAO_INTELECTUAL, NM_AUTOR, TP_AUTOR, starts_with("ID_PESSOA")),
+            by = c("ID_ADD_PRODUCAO_INTELECTUAL"))
+
+artigos_autor |> group_by(TP_AUTOR) |> count()
