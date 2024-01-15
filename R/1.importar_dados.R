@@ -277,8 +277,12 @@ bolsas_pb |> write_rds("dados/tidy/bolsas_pb.rds")
 
 ##### Produção Intelectual da Paraíba ---------------------
 
-# Apenas produções declaradas. Não contém todas as produções. 
-# Exemplo: após estudante se desvincular do programa.
+# ID_PESSOA é unico para cada indivíduo. Existe 5 colunas com ID_PESSOA:
+# ID_PESSOA_DISCENTE; ID_PESSOA_DOCENTE; ID_PESSOA_POS_DOC; ID_PESSOA_EGRESSO;
+# ID_PESSOA_PART_EXTERNO. 
+# Se um artigo foi publicado quando o estudante já se formou, ele deve aparecer
+# com ID_PESSOA_EGRESSO == ID_PESSOA e NM_AUTOR. 
+
 artigos_autor <- producao_artigos_periodicos |> 
   select(ID_ADD_PRODUCAO_INTELECTUAL, NM_PRODUCAO, 
          NM_SUBTIPO_PRODUCAO, NM_AREA_CONCENTRACAO,
@@ -302,7 +306,7 @@ artigos_autor |>
 
 
 autor_id <- autor_producao_periodicos |> 
-  sample_n(1000) |> 
+  # sample_n(1000) |> 
   select(NM_AUTOR, starts_with("ID_PESSOA")) |> 
   mutate(across(starts_with("ID_PESSOA"), as.numeric)) |> 
   mutate(across(starts_with("ID_PESSOA"), ~ ifelse(is.na(.), 0, 1),
