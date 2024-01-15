@@ -284,7 +284,14 @@ artigos_autor <- producao_artigos_periodicos |>
          NM_SUBTIPO_PRODUCAO, NM_AREA_CONCENTRACAO,
          SG_ESTRATO, DS_TITULO_PADRONIZADO, CD_IDENTIFICADOR_VEICULO) |> 
   left_join(autor_producao_periodicos |> 
-              select(ID_ADD_PRODUCAO_INTELECTUAL, NM_AUTOR, TP_AUTOR, starts_with("ID_PESSOA")),
-            by = c("ID_ADD_PRODUCAO_INTELECTUAL"))
+              select(ID_ADD_PRODUCAO_INTELECTUAL, NM_AUTOR, TP_AUTOR, 
+                     starts_with("ID_PESSOA")),
+            by = c("ID_ADD_PRODUCAO_INTELECTUAL")) |> 
+  mutate(across(starts_with("ID_PESSOA"), as.numeric))
 
 artigos_autor |> group_by(TP_AUTOR) |> count()
+
+# discentes_pb <- read_rds("dados/tidy/discentes_pb.rds")
+
+artigos_autor |> 
+  filter(NM_AUTOR %in% discentes_pb$NM_DISCENTE)
