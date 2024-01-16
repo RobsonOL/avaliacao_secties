@@ -298,11 +298,13 @@ bolsas_pb |> write_rds("dados/tidy/bolsas_pb.rds")
 # producao_artigos_periodicos <- read_rds(paste0(PATH_DADOS, "producao_artigos_periodicos.rds"))
 # autor_producao_periodicos <- read_rds(paste0(PATH_DADOS, "autor_producao_periodicos.rds"))
 
+producao_artigos_periodicos |> glimpse()
+
 artigos_autor <- producao_artigos_periodicos |> 
   select(ID_ADD_PRODUCAO_INTELECTUAL, NM_PRODUCAO, CD_PROGRAMA_IES,
          NM_PROGRAMA_IES, SG_ENTIDADE_ENSINO, SG_ENTIDADE_ENSINO,
          AN_BASE, NM_SUBTIPO_PRODUCAO, NM_AREA_CONCENTRACAO,
-         SG_ESTRATO, DS_TITULO_PADRONIZADO, CD_IDENTIFICADOR_VEICULO) |> 
+         SG_ESTRATO, DS_TITULO_PADRONIZADO, CD_IDENTIFICADOR_VEICULO, ) |> 
   rename(ANO = AN_BASE) |> 
   left_join(autor_producao_periodicos |> 
               select(ID_ADD_PRODUCAO_INTELECTUAL, 
@@ -320,5 +322,6 @@ artigos_autor <- producao_artigos_periodicos |>
 ies_uf <-  read_rds("dados/tidy/ies_uf.rds")
 cd_programa_paraiba <- ies_uf |> filter(SG_UF_IES == 'PB') |> pull(CD_PROGRAMA)
 
+# Artigos de 2017-2020 possuem ANO == 2017
 artigos_autor_pb <- artigos_autor |> filter(CD_PROGRAMA_IES %in% cd_programa_paraiba)
 artigos_autor_pb |> write_rds("dados/tidy/artigos_autor_pb.rds")

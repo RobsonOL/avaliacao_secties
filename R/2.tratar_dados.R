@@ -5,13 +5,13 @@ library(tidyverse)
 library(vroom)
 library(lubridate)
 
-#### DADOS -------------
+# DADOS -------------
 discentes_pb <- read_rds("dados/tidy/discentes_pb.rds")
 teses_pb <- read_rds("dados/tidy/teses_dissertacoes_pb.rds")
 bolsas_pb <- read_rds("dados/tidy/bolsas_pb.rds")
 artigos_autor_pb <- read_rds("dados/tidy/artigos_autor_pb.rds")
 
-#### DISCENTES PARAÍBA
+###### Informações básicas do Discente -----------------------
 
 # OBS:
 # 1. DISCENTES: Não existe ID_PESSOA antes de 2013
@@ -34,7 +34,7 @@ df <- discentes_pb |>
 #   group_by(contagem) |> summarise(n = n()) # todo mundo tem 8 anos de informações
 
 
-# É BOLSISTA/ANO/PESSOA
+###### Informações de Bolsa --------------
 df <- df |> left_join(
   bolsas_pb |> 
     select(ID_PESSOA, ANO, QT_BOLSA_ANO, VL_BOLSA_ANO, DS_NIVEL),
@@ -46,3 +46,10 @@ df <- df |> left_join(
   relocate(BOLSISTA, .after = IDADE_DISCENTE)
 
 
+###### Informações de Publicação --------------
+
+# TODO: Publicacoes de 2017-2020 possuem o mesmo ANO == 2017. A não ser que se recupere o ano com DOI.
+# O ano de publicação está em PUBLICACAO_DETALHES:
+# https://dadosabertos.capes.gov.br/dataset/detalhes-da-producao-intelectual-artistica-2013a2016
+# https://dadosabertos.capes.gov.br/dataset/2017-a-2020-detalhes-da-producao-intelectual-bibliografica-de-programas-de-pos-graduacao
+artigos_autor |> glimpse()
