@@ -184,6 +184,17 @@ bolsas_mobilidade <- list.files(path = PATH_MOBILIDADE,
 bolsas_mobilidade |> write_rds(paste0(PATH_DADOS, "bolsas_mobilidade.rds"))
 
 
+##### Detalhes da Produção de Periódicos -------
+# Contém o DOI da publicação
+
+PATH_DETALHES <- paste0(PATH_DADOS, "producao_detalhes/")
+
+# detalhes_producao_periodicos <- list.files(path = PATH_DETALHES,
+#                                            pattern = "*.zip",
+#                                            full.names = TRUE) |>
+#   map_df(read_csv2,
+#          locale = locale(encoding = 'latin5'),
+#          col_types = cols(.default = "c"))
 
 
 
@@ -298,7 +309,7 @@ bolsas_pb |> write_rds("dados/tidy/bolsas_pb.rds")
 # producao_artigos_periodicos <- read_rds(paste0(PATH_DADOS, "producao_artigos_periodicos.rds"))
 # autor_producao_periodicos <- read_rds(paste0(PATH_DADOS, "autor_producao_periodicos.rds"))
 
-producao_artigos_periodicos |> glimpse()
+producao_artigos_periodicos |> 
 
 artigos_autor <- producao_artigos_periodicos |> 
   select(ID_ADD_PRODUCAO_INTELECTUAL, NM_PRODUCAO, CD_PROGRAMA_IES,
