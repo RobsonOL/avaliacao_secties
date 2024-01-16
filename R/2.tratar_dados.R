@@ -1,9 +1,20 @@
 #### Packages -----------
 rm(list = ls())
 
-library(tidyverse)
-library(vroom)
-library(lubridate)
+#install.packages("pacman")
+pacman::p_load(tidyverse, vroom, janitor)
+
+#library(tidyverse)
+#library(vroom)
+#library(lubridate)
+
+# Funcao para calcular a moda
+get_mode <- function(x) {
+  x <- na.omit(x)
+  ux <- unique(x)
+  tab <- tabulate(match(x, ux))
+  ux[tab == max(tab)]
+}
 
 # DADOS -------------
 discentes_pb <- read_rds("dados/tidy/discentes_pb.rds")
@@ -53,3 +64,22 @@ df <- df |> left_join(
 # https://dadosabertos.capes.gov.br/dataset/detalhes-da-producao-intelectual-artistica-2013a2016
 # https://dadosabertos.capes.gov.br/dataset/2017-a-2020-detalhes-da-producao-intelectual-bibliografica-de-programas-de-pos-graduacao
 artigos_autor |> glimpse()
+
+
+
+# Criar dimensao 'discente' -----
+dim_discentes <- discentes_pb |> 
+  dplyr::mutate(
+    NM_DISCENTE = stringr::str_to_upper(
+      janitor::make_clean_names(NM_DISCENTE, case = "sentence", allow_dupes = TRUE)
+    )
+  ) |> 
+  dplyr::group_by(
+    NM_DISCENTE, AN_NASCIMENTO_DISCENTE
+  ) |> 
+  dplyr::reframe(
+    across(
+      c(NR_DOCUMENTO_DISCENTE, ID_PESSOA),
+      ~get_mode(.x)
+    )
+  )
