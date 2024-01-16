@@ -125,9 +125,19 @@ bolsas_programa <- bolsas_programa |>
   mutate(VL_TAXA_ANO = parse_number(VL_TAXA_ANO)) |> 
   relocate(NM_DISCENTE, .after = ANO) 
   
+# Unidade de Ensino por Estado
+ies_uf <- bolsas_programa |> 
+  select(CD_PROGRAMA_PPG, NM_PROGRAMA_PPG,
+         SG_IES_ESTUDO, NM_IES_ESTUDO, CD_IES_ESTUDO, SG_UF_IES_ESTUDO) |> 
+  # remover _ESTUDO do nome das colunas:
+  rename_with(~ str_remove(., "_ESTUDO"), ends_with("_ESTUDO")) |>
+  rename_with(~ str_remove(., "_PPG"), ends_with("_PPG")) |>
+  distinct() 
+
+ies_uf |> 
+  write_rds("dados/tidy/ies_uf.rds")
 
 bolsas_programa |> write_rds(paste0(PATH_DADOS, "bolsas_programas.rds"))
-
 
 
 
@@ -162,7 +172,9 @@ autor_producao_periodicos <- list.files(path = PATH_AUTOR_PERIODICOS,
 autor_producao_periodicos |> write_rds(paste0(PATH_DADOS, "autor_producao_periodicos.rds"))
 
 ##### Bolsas de Mobilidade Internacional -----------------------
-bolsas_mobilidade <- list.files(path = "dados/brutos/bolsas_mobilidade_internacional/",
+PATH_MOBILIDADE <- paste0(PATH_DADOS, "bolsas_mobilidade_internacional/")
+
+bolsas_mobilidade <- list.files(path = PATH_MOBILIDADE,
                                  pattern = "*.zip",
                                  full.names = TRUE) |>
   map_df(read_csv2,
@@ -283,39 +295,30 @@ bolsas_pb |> write_rds("dados/tidy/bolsas_pb.rds")
 # Se um artigo foi publicado quando o estudante já se formou, ele deve aparecer
 # com ID_PESSOA_EGRESSO == ID_PESSOA e NM_AUTOR. 
 
+# producao_artigos_periodicos <- read_rds(paste0(PATH_DADOS, "producao_artigos_periodicos.rds"))
+# autor_producao_periodicos <- read_rds(paste0(PATH_DADOS, "autor_producao_periodicos.rds"))
+
 artigos_autor <- producao_artigos_periodicos |> 
-  select(ID_ADD_PRODUCAO_INTELECTUAL, NM_PRODUCAO, 
-         NM_SUBTIPO_PRODUCAO, NM_AREA_CONCENTRACAO,
+  select(ID_ADD_PRODUCAO_INTELECTUAL, NM_PRODUCAO, CD_PROGRAMA_IES,
+         NM_PROGRAMA_IES, SG_ENTIDADE_ENSINO, SG_ENTIDADE_ENSINO,
+         AN_BASE, NM_SUBTIPO_PRODUCAO, NM_AREA_CONCENTRACAO,
          SG_ESTRATO, DS_TITULO_PADRONIZADO, CD_IDENTIFICADOR_VEICULO) |> 
+  rename(ANO = AN_BASE) |> 
   left_join(autor_producao_periodicos |> 
-              select(ID_ADD_PRODUCAO_INTELECTUAL, NM_AUTOR, TP_AUTOR, 
-                     starts_with("ID_PESSOA")),
+              select(ID_ADD_PRODUCAO_INTELECTUAL, 
+                     NM_AUTOR, TP_AUTOR, NM_NIVEL_DISCENTE,
+                     starts_with("ID_PESSOA")), 
             by = c("ID_ADD_PRODUCAO_INTELECTUAL")) |> 
-  mutate(across(starts_with("ID_PESSOA"), as.numeric))
-
-artigos_autor |> group_by(TP_AUTOR) |> count()
-
-# discentes_pb <- read_rds("dados/tidy/discentes_pb.rds")
-
-artigos_autor |> 
-  filter(NM_AUTOR %in% discentes_pb$NM_DISCENTE) |> 
-  group_by(ID_PESSOA_DISCENTE) |> 
-  summarise(
-    publicacoes = n()
-  )
-
-
-autor_id <- autor_producao_periodicos |> 
-  # sample_n(1000) |> 
-  select(NM_AUTOR, starts_with("ID_PESSOA")) |> 
   mutate(across(starts_with("ID_PESSOA"), as.numeric)) |> 
   mutate(across(starts_with("ID_PESSOA"), ~ ifelse(is.na(.), 0, 1),
                 .names = "{sub('ID_PESSOA_', '', .col)}")) |> 
   mutate(ID_PESSOA = coalesce(ID_PESSOA_DISCENTE, ID_PESSOA_DOCENTE, 
                               ID_PESSOA_EGRESSO, ID_PESSOA_POS_DOC, 
-                              ID_PESSOA_PART_EXTERNO)) |> 
-  select(NM_AUTOR, ID_PESSOA, DISCENTE, DOCENTE, PART_EXTERNO, EGRESSO, POS_DOC) 
+                              ID_PESSOA_PART_EXTERNO))
 
+# Filtrar para Programa de Pós-Graduação da Paraíba
+ies_uf <-  read_rds("dados/tidy/ies_uf.rds")
+cd_programa_paraiba <- ies_uf |> filter(SG_UF_IES == 'PB') |> pull(CD_PROGRAMA)
 
-autor_id |> group_by(NM_AUTOR) |> count() |> arrange(desc(n))
-autor_id |> filter(NM_AUTOR == 'ALEX SANDRO ROLLAND DE SOUZA')
+artigos_autor_pb <- artigos_autor |> filter(CD_PROGRAMA_IES %in% cd_programa_paraiba)
+artigos_autor_pb |> write_rds("dados/tidy/artigos_autor_pb.rds")
