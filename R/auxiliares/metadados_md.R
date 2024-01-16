@@ -1,4 +1,4 @@
-library(vroom)
+library(readr)
 library(knitr)
 metadados <- read_csv2("dados/metadados.csv", locale = locale(encoding = 'latin5'))
 
