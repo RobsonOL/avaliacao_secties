@@ -41,7 +41,6 @@ dim_discentes <- discentes_pb |>
 
 dim_discentes |> write_rds("dados/tidy/dim_discentes.rds")
 
-
 df_discentes <- dim_discentes |> 
   # O mesmo ID_PESSOA ainda gera variações do mesmo nome. Ex: ID_PESSOA == 51331
   dplyr::distinct(ID_PESSOA, .keep_all = TRUE) |> 
@@ -65,7 +64,8 @@ df_discentes <- dim_discentes |>
 df_discentes_bolsa <- df_discentes |>
     dplyr::left_join(bolsas_pb |>
                      dplyr::select(ID_PESSOA, SG_PROGRAMA_CAPES, ANO,
-                                   QT_BOLSA_ANO, VL_BOLSA_ANO, DS_NIVEL),
+                                   QT_BOLSA_ANO, VL_BOLSA_ANO, DS_NIVEL) |> 
+                       filter(DS_NIVEL %in% c("DOUTORADO", "MESTRADO")),
                    by = c("ID_PESSOA", "ANO")) |> 
   # Grande maioria dos que receberam bolsa estavam em situação ativo ou de desligamento.
   # Cerca de 200 pessoas não tinham alguma situação (ABANDONO, DESLIGAMENTO, MATRICULA ATIVA OU TITULADO), 
