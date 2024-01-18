@@ -23,7 +23,6 @@ get_mode <- function(x) {
 
 
 # Criar dimensao 'discente' -----
-
 dim_discentes <- discentes_pb |> 
   dplyr::mutate(
     NM_DISCENTE = stringr::str_to_upper(
@@ -43,21 +42,18 @@ dim_discentes <- discentes_pb |>
 dim_discentes |> write_rds("dados/tidy/dim_discentes.rds")
 
 
-dim_discentes |> group_by(ID_PESSOA) |> count() |> arrange(desc(n))
-dim_discentes |> filter(ID_PESSOA == 51331) 
-
-
-# mesmo ID_PESSOA gerando vários nomes. Ex: ID_PESSOA == 51331
-df <- dim_discentes |> 
-  distinct(ID_PESSOA, .keep_all = TRUE) |> 
-  drop_na(ID_PESSOA) |> 
-  crossing(ANO = seq(2013, 2020)) |>
+df_discentes <- dim_discentes |> 
+  # O mesmo ID_PESSOA ainda gera variações do mesmo nome. Ex: ID_PESSOA == 51331
+  dplyr::distinct(ID_PESSOA, .keep_all = TRUE) |> 
+  tidyr::drop_na(ID_PESSOA) |> 
+  # A partir de 2017, quando as informações sobre bolsa FAPESQ passaram a estar disponíveis
+  tidyr::crossing(ANO = seq(2017, 2020)) |>
   dplyr::relocate(ANO, .before = NM_DISCENTE) |> 
   dplyr::mutate(IDADE_DISCENTE = ANO - AN_NASCIMENTO_DISCENTE) |> 
   dplyr::left_join(discentes_pb |> 
-                     select(NM_DISCENTE, ID_PESSOA, ANO, 
+                     dplyr::select(NM_DISCENTE, ID_PESSOA, ANO, 
                             DT_MATRICULA_DISCENTE,
-                            NM_SITUACAO_DISCENTE,
+                            NM_SITUACAO_DISCENTE, DT_SITUACAO_DISCENTE,
                             DS_GRAU_ACADEMICO_DISCENTE,
                             SG_ENTIDADE_ENSINO, CD_PROGRAMA_IES, NM_PROGRAMA_IES, 
                             CD_AREA_AVALIACAO, NM_AREA_AVALIACAO),
@@ -66,17 +62,23 @@ df <- dim_discentes |>
 
   
 ###### Informações de Bolsa --------------
-
-df <- df |> left_join(
-  bolsas_pb |> 
-    select(ID_PESSOA, ANO, QT_BOLSA_ANO, VL_BOLSA_ANO, DS_NIVEL),
-  by = c("ID_PESSOA", "ANO")
-) |> 
-  mutate(BOLSISTA = ifelse(
-    !is.na(VL_BOLSA_ANO), 1, 0
-  )) |> 
-  relocate(BOLSISTA, .after = IDADE_DISCENTE)
-
+df_discentes_bolsa <- df_discentes |>
+    dplyr::left_join(bolsas_pb |>
+                     dplyr::select(ID_PESSOA, SG_PROGRAMA_CAPES, ANO,
+                                   QT_BOLSA_ANO, VL_BOLSA_ANO, DS_NIVEL),
+                   by = c("ID_PESSOA", "ANO")) |> 
+  # Grande maioria dos que receberam bolsa estavam em situação ativo ou de desligamento.
+  # Cerca de 200 pessoas não tinham alguma situação (ABANDONO, DESLIGAMENTO, MATRICULA ATIVA OU TITULADO), 
+  # mas aparecem recebendo bolsa. COmo são uma minoria, vou considerar como ativo.
+  dplyr::mutate(CURSOU_PPG_ANO = ifelse(!is.na(NM_SITUACAO_DISCENTE), 1, 0)) |>
+  dplyr::mutate(RECEBEU_BOLSA_ANO = ifelse(!is.na(QT_BOLSA_ANO), 1, 0)) |>
+  # dplyr::mutate(CURSOU_PPG_ANO = ifelse(RECEBEU_BOLSA_ANO == 1, 1, CURSOU_PPG_ANO)) |>
+  dplyr::mutate(TIPO_BOLSA = case_when(
+                    CURSOU_PPG_ANO == 1 & RECEBEU_BOLSA_ANO == 1 & SG_PROGRAMA_CAPES == "FAPESQ" ~ "BOLSISTA FAPESQ",
+                    CURSOU_PPG_ANO == 1 & RECEBEU_BOLSA_ANO == 1 & SG_PROGRAMA_CAPES != "FAPESQ" ~ "BOLSISTA NÃO-FAPESQ",
+                    CURSOU_PPG_ANO == 1 & RECEBEU_BOLSA_ANO == 0 ~ "NÃO-BOLSISTA",
+                    CURSOU_PPG_ANO == 0 ~ "NÃO CURSOU PPG NO ANO"
+                  )) 
 
 ###### Informações de Publicação --------------
 
