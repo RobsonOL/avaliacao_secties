@@ -207,7 +207,8 @@ discentes_pb <- discentes |>
                   ID_PESSOA), as.numeric)) |> 
   select(AN_BASE, NM_DISCENTE, NR_DOCUMENTO_DISCENTE, ID_PESSOA,
          AN_NASCIMENTO_DISCENTE, DT_MATRICULA_DISCENTE, AN_MATRICULA_DISCENTE, 
-         ME_MATRICULA_DISCENTE, NM_SITUACAO_DISCENTE, SG_ENTIDADE_ENSINO, 
+         ME_MATRICULA_DISCENTE, NM_SITUACAO_DISCENTE, DT_SITUACAO_DISCENTE,
+         AN_SITUACAO_DISCENTE, ME_SITUACAO_DISCENTE, SG_ENTIDADE_ENSINO, 
          NM_ENTIDADE_ENSINO, CS_STATUS_JURIDICO, SG_UF_ENTIDADE_ENSINO, SG_UF_PROGRAMA,
          CD_PROGRAMA_IES, NM_PROGRAMA_IES, NM_MODALIDADE_PROGRAMA,
          CD_AREA_AVALIACAO, NM_AREA_AVALIACAO, NM_NIVEL_TITULACAO_DISCENTE,
@@ -224,21 +225,26 @@ discentes_pb <- discentes |>
   mutate(DT_MATRICULA_DISCENTE = if_else(AN_BASE <= 2012, 
                                          as.Date(paste0(AN_MATRICULA_DISCENTE, "-", ME_MATRICULA_DISCENTE, "-01")), 
                                          DT_MATRICULA_DISCENTE)) |> 
+  mutate(across(c(DT_SITUACAO_DISCENTE), parse_date_time, "%d%b%y:%H:%M:%S")) |>
+  mutate(DT_SITUACAO_DISCENTE = if_else(AN_BASE <= 2012, 
+                                        as.Date(paste0(AN_SITUACAO_DISCENTE, "-", ME_SITUACAO_DISCENTE, "-01")), 
+                                        DT_SITUACAO_DISCENTE)) |> 
   mutate(IDADE = AN_BASE - AN_NASCIMENTO_DISCENTE) |>
   # ORIENTADOR:
   mutate(NM_ORIENTADOR = if_else(AN_BASE <= 2012,
-                                  NM_ORIENTADOR_PRINCIPAL, 
+                                 NM_ORIENTADOR_PRINCIPAL, 
                                  NM_ORIENTADOR)) |> 
   # NIVEL DO PROGRAMA
   mutate(NM_GRAU_PROGRAMA = if_else(AN_BASE <= 2012,
-                                 NM_NIVEL_PROGRAMA, 
-                                 NM_GRAU_PROGRAMA)) |> 
+                                    NM_NIVEL_PROGRAMA, 
+                                    NM_GRAU_PROGRAMA)) |> 
   # NIVEL DE TITULACAO DO DISCENTE
   mutate(DS_GRAU_ACADEMICO_DISCENTE = if_else(AN_BASE <= 2012,
-                                    NM_NIVEL_TITULACAO_DISCENTE, 
-                                    DS_GRAU_ACADEMICO_DISCENTE)) |> 
+                                              NM_NIVEL_TITULACAO_DISCENTE, 
+                                              DS_GRAU_ACADEMICO_DISCENTE)) |> 
   select(-c(NM_ORIENTADOR_PRINCIPAL, NM_NIVEL_PROGRAMA, AN_MATRICULA_DISCENTE,
-            ME_MATRICULA_DISCENTE, SG_UF_ENTIDADE_ENSINO,NM_NIVEL_TITULACAO_DISCENTE)) |> 
+            ME_MATRICULA_DISCENTE, AN_SITUACAO_DISCENTE, ME_SITUACAO_DISCENTE, 
+            SG_UF_ENTIDADE_ENSINO,NM_NIVEL_TITULACAO_DISCENTE)) |> 
   mutate(across(where(is.character), ~ na_if(., "NI"))) |> 
   rename(ANO = AN_BASE) |> 
   relocate(IDADE, .after = AN_NASCIMENTO_DISCENTE) |> 
@@ -247,6 +253,7 @@ discentes_pb <- discentes |>
                                          "UFPB/RT" ~ "UFPB-RT",
                                          "UFPB/AREIA" ~ "UFPB-AREIA",
                                          .default = SG_ENTIDADE_ENSINO))
+
 
 discentes_pb |> write_rds("dados/tidy/discentes_pb.rds")
 
