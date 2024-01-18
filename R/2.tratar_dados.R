@@ -11,7 +11,7 @@ teses_pb <- read_rds("dados/tidy/teses_dissertacoes_pb.rds")
 bolsas_pb <- read_rds("dados/tidy/bolsas_pb.rds")
 artigos_autor_pb <- read_rds("dados/tidy/artigos_autor_pb.rds")
 
-## Informações básicas do Discente -------
+###### Informações básicas do Discente -------
 
 # Funcao para calcular a moda
 get_mode <- function(x) {
@@ -22,7 +22,7 @@ get_mode <- function(x) {
 }
 
 
-# Criar dimensao 'discente' -----
+##### Criar dimensao 'discente' -----
 dim_discentes <- discentes_pb |> 
   dplyr::mutate(
     NM_DISCENTE = stringr::str_to_upper(
@@ -61,6 +61,17 @@ df_discentes <- dim_discentes |>
 
   
 ###### Informações de Bolsa --------------
+# FIXME: Base de bolsas: Discentes como LORENA MARIA AUGUSTO PEQUENO aparecem repetidas vezes no mesmo ano.
+# A única diferença é o total de bolsas recebidas no ano. Assim, vou considerar a maior quantidade de bolsas recebidas no ano.
+# E remover as demais. Me parece que a base é alimentada diversas vezes no mesmo ano.
+bolsas_pb <- bolsas_pb |> 
+  dplyr::filter(ANO >= 2017) |> 
+  group_by(ID_PESSOA, ANO) |> 
+  filter(QT_BOLSA_ANO == max(QT_BOLSA_ANO)) |> 
+  slice(1)  |> 
+  ungroup() 
+  
+
 df_discentes_bolsa <- df_discentes |>
     dplyr::left_join(bolsas_pb |>
                      dplyr::select(ID_PESSOA, SG_PROGRAMA_CAPES, ANO,
@@ -80,6 +91,19 @@ df_discentes_bolsa <- df_discentes |>
                     CURSOU_PPG_ANO == 0 ~ "NÃO CURSOU PPG NO ANO"
                   )) 
 
+
+###### Tese e Dissertação -------------
+
+df_discentes_bolsa |> 
+  dplyr::left_join(
+    teses_pb |> 
+      dplyr::select(ID_PESSOA, ANO, NM_PRODUCAO, CD_PROGRAMA, NM_PROGRAMA, DT_TITULACAO),
+    by = c("ID_PESSOA", "ANO")) |> 
+  
+
+df_discentes_bolsa |> filter(ID_PESSOA == 2790152) |> 
+  select(NM_DISCENTE, ANO, NM_SITUACAO_DISCENTE, DS_GRAU_ACADEMICO_DISCENTE, NM_PROGRAMA_IES, QT_BOLSA_ANO, VL_BOLSA_ANO, SG_PROGRAMA_CAPES) |> 
+  View()
 ###### Informações de Publicação --------------
 
 # TODO: Publicacoes de 2017-2020 possuem o mesmo ANO == 2017. A não ser que se recupere o ano com DOI.
