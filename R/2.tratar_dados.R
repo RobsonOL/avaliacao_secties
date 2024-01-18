@@ -2,11 +2,16 @@
 rm(list = ls())
 
 #install.packages("pacman")
-pacman::p_load(tidyverse, vroom, janitor)
+pacman::p_load(tidyverse, janitor, readr, tidyr)
 
-#library(tidyverse)
-#library(vroom)
-#library(lubridate)
+# DADOS ------
+
+discentes_pb <- read_rds("dados/tidy/discentes_pb.rds")
+teses_pb <- read_rds("dados/tidy/teses_dissertacoes_pb.rds")
+bolsas_pb <- read_rds("dados/tidy/bolsas_pb.rds")
+artigos_autor_pb <- read_rds("dados/tidy/artigos_autor_pb.rds")
+
+## Informações básicas do Discente -------
 
 # Funcao para calcular a moda
 get_mode <- function(x) {
@@ -16,36 +21,52 @@ get_mode <- function(x) {
   ux[tab == max(tab)]
 }
 
-# DADOS -------------
-discentes_pb <- read_rds("dados/tidy/discentes_pb.rds")
-teses_pb <- read_rds("dados/tidy/teses_dissertacoes_pb.rds")
-bolsas_pb <- read_rds("dados/tidy/bolsas_pb.rds")
-artigos_autor_pb <- read_rds("dados/tidy/artigos_autor_pb.rds")
 
-###### Informações básicas do Discente -----------------------
+# Criar dimensao 'discente' -----
 
-# OBS:
-# 1. DISCENTES: Não existe ID_PESSOA antes de 2013
-# 2. DISCENTES: Não existe CPF antes de 2013
-# 3. DISCENTES e BOLSAS: unir por NM_DISCENTE e NM_BOLSISTA (??). Talvez área.
-# 4. BOLSAS: Existe ID_PESSOA antes de 2013
+dim_discentes <- discentes_pb |> 
+  dplyr::mutate(
+    NM_DISCENTE = stringr::str_to_upper(
+      janitor::make_clean_names(NM_DISCENTE, case = "sentence", allow_dupes = TRUE)
+    )
+  ) |> 
+  dplyr::group_by(
+    NM_DISCENTE, AN_NASCIMENTO_DISCENTE
+  ) |> 
+  dplyr::reframe(
+    across(
+      c(NR_DOCUMENTO_DISCENTE, ID_PESSOA),
+      ~get_mode(.x)
+    )
+  )
 
-df <- discentes_pb |> 
-  filter(ANO >= 2013) |> 
-  distinct(ID_PESSOA, NM_DISCENTE, AN_NASCIMENTO_DISCENTE, NR_DOCUMENTO_DISCENTE) |> 
-  crossing(ANO = seq(2013, 2020)) |> 
-  relocate(ANO, .before = ID_PESSOA) |>
-  mutate(IDADE_DISCENTE = ANO - AN_NASCIMENTO_DISCENTE) |> 
-  # Algumas pessoas tem nomes diferentes ao longo dos anos:
-  # ID_PESSOA == 51331 se chama ANNE KARINE DE SOUZA NASCIMENTO
-  # e em outros momentos se chama ANNE KARINE DE SOUZA NASCIMENTO SOARES
-  distinct(ID_PESSOA, ANO, .keep_all = TRUE)
-
-# df |> group_by(ID_PESSOA) |>summarise(contagem = n()) |> 
-#   group_by(contagem) |> summarise(n = n()) # todo mundo tem 8 anos de informações
+dim_discentes |> write_rds("dados/tidy/dim_discentes.rds")
 
 
+dim_discentes |> group_by(ID_PESSOA) |> count() |> arrange(desc(n))
+dim_discentes |> filter(ID_PESSOA == 51331) 
+
+
+# mesmo ID_PESSOA gerando vários nomes. Ex: ID_PESSOA == 51331
+df <- dim_discentes |> 
+  distinct(ID_PESSOA, .keep_all = TRUE) |> 
+  drop_na(ID_PESSOA) |> 
+  crossing(ANO = seq(2013, 2020)) |>
+  dplyr::relocate(ANO, .before = NM_DISCENTE) |> 
+  dplyr::mutate(IDADE_DISCENTE = ANO - AN_NASCIMENTO_DISCENTE) |> 
+  dplyr::left_join(discentes_pb |> 
+                     select(NM_DISCENTE, ID_PESSOA, ANO, 
+                            DT_MATRICULA_DISCENTE,
+                            NM_SITUACAO_DISCENTE,
+                            DS_GRAU_ACADEMICO_DISCENTE,
+                            SG_ENTIDADE_ENSINO, CD_PROGRAMA_IES, NM_PROGRAMA_IES, 
+                            CD_AREA_AVALIACAO, NM_AREA_AVALIACAO),
+                   by = c("ANO", "NM_DISCENTE", "ID_PESSOA"))
+
+
+  
 ###### Informações de Bolsa --------------
+
 df <- df |> left_join(
   bolsas_pb |> 
     select(ID_PESSOA, ANO, QT_BOLSA_ANO, VL_BOLSA_ANO, DS_NIVEL),
@@ -67,19 +88,3 @@ artigos_autor |> glimpse()
 
 
 
-# Criar dimensao 'discente' -----
-dim_discentes <- discentes_pb |> 
-  dplyr::mutate(
-    NM_DISCENTE = stringr::str_to_upper(
-      janitor::make_clean_names(NM_DISCENTE, case = "sentence", allow_dupes = TRUE)
-    )
-  ) |> 
-  dplyr::group_by(
-    NM_DISCENTE, AN_NASCIMENTO_DISCENTE
-  ) |> 
-  dplyr::reframe(
-    across(
-      c(NR_DOCUMENTO_DISCENTE, ID_PESSOA),
-      ~get_mode(.x)
-    )
-  )
