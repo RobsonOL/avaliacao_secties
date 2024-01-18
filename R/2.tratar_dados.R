@@ -6,10 +6,10 @@ pacman::p_load(tidyverse, janitor, readr, tidyr)
 
 # DADOS ------
 
-discentes_pb <- read_rds("dados/tidy/discentes_pb.rds")
-teses_pb <- read_rds("dados/tidy/teses_dissertacoes_pb.rds")
-bolsas_pb <- read_rds("dados/tidy/bolsas_pb.rds")
-artigos_autor_pb <- read_rds("dados/tidy/artigos_autor_pb.rds")
+discentes_pb <- readr::read_rds("dados/tidy/discentes_pb.rds")
+teses_pb <- readr::read_rds("dados/tidy/teses_dissertacoes_pb.rds")
+bolsas_pb <- readr::read_rds("dados/tidy/bolsas_pb.rds")
+artigos_autor_pb <- readr::read_rds("dados/tidy/artigos_autor_pb.rds")
 
 ###### Informações básicas do Discente -------
 
@@ -66,17 +66,17 @@ df_discentes <- dim_discentes |>
 # E remover as demais. Me parece que a base é alimentada diversas vezes no mesmo ano.
 bolsas_pb <- bolsas_pb |> 
   dplyr::filter(ANO >= 2017) |> 
-  group_by(ID_PESSOA, ANO) |> 
-  filter(QT_BOLSA_ANO == max(QT_BOLSA_ANO)) |> 
-  slice(1)  |> 
-  ungroup() 
+  dplyr::group_by(ID_PESSOA, ANO) |> 
+  dplyr::filter(QT_BOLSA_ANO == max(QT_BOLSA_ANO)) |> 
+  dplyr::slice(1)  |> 
+  dplyr::ungroup() 
   
 
 df_discentes_bolsa <- df_discentes |>
     dplyr::left_join(bolsas_pb |>
                      dplyr::select(ID_PESSOA, SG_PROGRAMA_CAPES, ANO,
                                    QT_BOLSA_ANO, VL_BOLSA_ANO, DS_NIVEL) |> 
-                       filter(DS_NIVEL %in% c("DOUTORADO", "MESTRADO")),
+                       dplyr::filter(DS_NIVEL %in% c("DOUTORADO", "MESTRADO")),
                    by = c("ID_PESSOA", "ANO")) |> 
   # Grande maioria dos que receberam bolsa estavam em situação ativo ou de desligamento.
   # Cerca de 200 pessoas não tinham alguma situação (ABANDONO, DESLIGAMENTO, MATRICULA ATIVA OU TITULADO), 
@@ -93,7 +93,6 @@ df_discentes_bolsa <- df_discentes |>
 
 
 ###### Tese e Dissertação -------------
-df_discentes_bolsa |> filter(ID_PESSOA == 96038) |> View()
 
 df_discentes_bolsa_tese <- df_discentes_bolsa |> 
   dplyr::left_join(
@@ -112,7 +111,14 @@ df_discentes_bolsa_tese <- df_discentes_bolsa |>
 # O ano de publicação está em PUBLICACAO_DETALHES:
 # https://dadosabertos.capes.gov.br/dataset/detalhes-da-producao-intelectual-artistica-2013a2016
 # https://dadosabertos.capes.gov.br/dataset/2017-a-2020-detalhes-da-producao-intelectual-bibliografica-de-programas-de-pos-graduacao
-artigos_autor |> glimpse()
 
-
+artigos_autor_pb |> 
+  dplyr::filter(!is.na(SG_ESTRATO), SG_ESTRATO != "NI") |>
+  dplyr::group_by(ID_PESSOA, SG_ESTRATO) |>
+  dplyr::summarise(ARTIGOS = n()) |> 
+  dplyr::ungroup() |> 
+  tidyr::pivot_wider(id_cols = ID_PESSOA, names_from = SG_ESTRATO, values_from = ARTIGOS, 
+              names_prefix = "ARTIGO_", values_fill = 0) |> 
+  dplyr::rowwise() |> 
+  dplyr::mutate(TOTAL_ARTIGOS = sum(c_across(starts_with('ARTIGO_'))))
 
