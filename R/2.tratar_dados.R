@@ -93,17 +93,19 @@ df_discentes_bolsa <- df_discentes |>
 
 
 ###### Tese e Dissertação -------------
+df_discentes_bolsa |> filter(ID_PESSOA == 96038) |> View()
 
-df_discentes_bolsa |> 
+df_discentes_bolsa_tese <- df_discentes_bolsa |> 
   dplyr::left_join(
     teses_pb |> 
       dplyr::select(ID_PESSOA, ANO, NM_PRODUCAO, CD_PROGRAMA, NM_PROGRAMA, DT_TITULACAO),
-    by = c("ID_PESSOA", "ANO")) |> 
-  
+    by = c("ID_PESSOA", "ANO", "CD_PROGRAMA_IES"="CD_PROGRAMA"))  |> 
+  dplyr::mutate(MESES_FORMACAO = ifelse(!is.na(DT_TITULACAO), 
+                                        round(difftime(DT_TITULACAO, DT_MATRICULA_DISCENTE, units = "weeks")/4.345), 
+                                        NA)) |> 
+  dplyr::mutate(TEM_TESE = ifelse(!is.na(NM_PRODUCAO), 1, 0)) 
 
-df_discentes_bolsa |> filter(ID_PESSOA == 2790152) |> 
-  select(NM_DISCENTE, ANO, NM_SITUACAO_DISCENTE, DS_GRAU_ACADEMICO_DISCENTE, NM_PROGRAMA_IES, QT_BOLSA_ANO, VL_BOLSA_ANO, SG_PROGRAMA_CAPES) |> 
-  View()
+
 ###### Informações de Publicação --------------
 
 # TODO: Publicacoes de 2017-2020 possuem o mesmo ANO == 2017. A não ser que se recupere o ano com DOI.
