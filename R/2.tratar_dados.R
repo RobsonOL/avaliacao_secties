@@ -2,7 +2,7 @@
 rm(list = ls())
 
 #install.packages("pacman")
-pacman::p_load(tidyverse, janitor, readr, tidyr)
+pacman::p_load(tidyverse, janitor, readr, tidyr, genderBR)
 
 # DADOS ------
 
@@ -45,6 +45,7 @@ df_discentes <- dim_discentes |>
   # O mesmo ID_PESSOA ainda gera variações do mesmo nome. Ex: ID_PESSOA == 51331
   dplyr::distinct(ID_PESSOA, .keep_all = TRUE) |> 
   tidyr::drop_na(ID_PESSOA) |> 
+  dplyr::mutate(GENERO = genderBR::get_gender(NM_DISCENTE)) |> 
   # A partir de 2017, quando as informações sobre bolsa FAPESQ passaram a estar disponíveis
   tidyr::crossing(ANO = seq(2017, 2020)) |>
   dplyr::relocate(ANO, .before = NM_DISCENTE) |> 
@@ -112,7 +113,7 @@ df_discentes_bolsa_tese <- df_discentes_bolsa |>
 # https://dadosabertos.capes.gov.br/dataset/detalhes-da-producao-intelectual-artistica-2013a2016
 # https://dadosabertos.capes.gov.br/dataset/2017-a-2020-detalhes-da-producao-intelectual-bibliografica-de-programas-de-pos-graduacao
 
-artigos_autor_pb |> 
+artigos_qualis <- artigos_autor_pb |> 
   dplyr::filter(!is.na(SG_ESTRATO), SG_ESTRATO != "NI") |>
   dplyr::group_by(ID_PESSOA, SG_ESTRATO) |>
   dplyr::summarise(ARTIGOS = n()) |> 
