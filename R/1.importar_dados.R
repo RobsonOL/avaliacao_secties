@@ -1,11 +1,6 @@
 # 1. PACKAGES -----------
 rm(list = ls())
-library(vroom)
-library(skimr)
-library(tidyverse)
-
-
-
+pacman::p_load(tidyverse, janitor, readr, tidyr, skimr, vroom)
 
 # 2. DADOS -------------
 
@@ -23,9 +18,6 @@ discentes <- list.files(path = PATH_DISCENTES,
   map_df(vroom, delim = ";", locale = locale(encoding = 'latin5'), col_types = cols(.default = "c")) 
 
 discentes |> write_rds(paste0(PATH_DADOS, "discentes.rds"))
-
-
-
 
 ##### Teses e dissertações de discentes de Pós-Graduação ---------------------------
 # https://dadosabertos.capes.gov.br/dataset/2017-2020-catalogo-de-teses-e-dissertacoes-da-capes
@@ -201,6 +193,9 @@ PATH_DETALHES <- paste0(PATH_DADOS, "producao_detalhes/")
 # 3. FILTRAR PARA PARAÍBA -----------------------
 
 ##### Discentes -----------------------
+
+# discentes <- read_rds(paste0(PATH_DADOS, "discentes.rds"))
+
 discentes_pb <- discentes |> 
   mutate(across(c(AN_BASE, CD_AREA_AVALIACAO, AN_NASCIMENTO_DISCENTE,
                   AN_MATRICULA_DISCENTE, ME_MATRICULA_DISCENTE,
@@ -214,13 +209,10 @@ discentes_pb <- discentes |>
          CD_AREA_AVALIACAO, NM_AREA_AVALIACAO, NM_NIVEL_TITULACAO_DISCENTE,
          DS_GRAU_ACADEMICO_DISCENTE, NM_ORIENTADOR, NM_ORIENTADOR_PRINCIPAL,
          NM_NIVEL_PROGRAMA, NM_GRAU_PROGRAMA) |> 
-  # SG_UF_PROGRAMA substituiu SG_UF_ENTIDADE_ENSINO em 2012
   mutate(SG_UF_PROGRAMA = if_else(AN_BASE <= 2012,
                                   SG_UF_ENTIDADE_ENSINO, 
                                   SG_UF_PROGRAMA)) |> 
-  # FILTRAR PARA PARAÍBA
   filter(SG_UF_PROGRAMA == "PB") |> 
-  # DT_MATRICULA_DISCENTE existe apenas a partir de 2013
   mutate(across(c(DT_MATRICULA_DISCENTE), parse_date_time, "%d%b%y:%H:%M:%S")) |>
   mutate(DT_MATRICULA_DISCENTE = if_else(AN_BASE <= 2012, 
                                          as.Date(paste0(AN_MATRICULA_DISCENTE, "-", ME_MATRICULA_DISCENTE, "-01")), 
@@ -230,15 +222,12 @@ discentes_pb <- discentes |>
                                         as.Date(paste0(AN_SITUACAO_DISCENTE, "-", ME_SITUACAO_DISCENTE, "-01")), 
                                         DT_SITUACAO_DISCENTE)) |> 
   mutate(IDADE = AN_BASE - AN_NASCIMENTO_DISCENTE) |>
-  # ORIENTADOR:
   mutate(NM_ORIENTADOR = if_else(AN_BASE <= 2012,
                                  NM_ORIENTADOR_PRINCIPAL, 
                                  NM_ORIENTADOR)) |> 
-  # NIVEL DO PROGRAMA
   mutate(NM_GRAU_PROGRAMA = if_else(AN_BASE <= 2012,
                                     NM_NIVEL_PROGRAMA, 
                                     NM_GRAU_PROGRAMA)) |> 
-  # NIVEL DE TITULACAO DO DISCENTE
   mutate(DS_GRAU_ACADEMICO_DISCENTE = if_else(AN_BASE <= 2012,
                                               NM_NIVEL_TITULACAO_DISCENTE, 
                                               DS_GRAU_ACADEMICO_DISCENTE)) |> 
@@ -252,13 +241,18 @@ discentes_pb <- discentes |>
                                          "UFPB/J.P." ~ "UFPB-JP",
                                          "UFPB/RT" ~ "UFPB-RT",
                                          "UFPB/AREIA" ~ "UFPB-AREIA",
-                                         .default = SG_ENTIDADE_ENSINO))
+                                         .default = SG_ENTIDADE_ENSINO)) |> 
+  dplyr::mutate(NM_DISCENTE = stringr::str_to_upper(janitor::make_clean_names(NM_DISCENTE, case = "sentence", allow_dupes = TRUE)
+    )
+  ) 
 
 
 discentes_pb |> write_rds("dados/tidy/discentes_pb.rds")
 
 
 ##### Teses e Dissertações da Paraíba ---------------------
+
+teses_dissertacoes <- read_rds(paste0(PATH_DADOS, "teses_dissertacoes.rds"))
 
 teses_dissertacoes_pb <- teses_dissertacoes |> 
   filter(SG_UF_IES == "PB") |> 
@@ -289,18 +283,26 @@ teses_dissertacoes_pb <- teses_dissertacoes |>
                                          "Mestrado" ~ "MESTRADO",
                                          "Doutorado" ~ "DOUTORADO",
                                          "Profissionalizante" ~ "MESTRADO PROFISSIONAL",
-                                         .default = NM_GRAU_ACADEMICO)) 
-
-
-
-teses_dissertacoes_pb |> group_by(NM_GRANDE_AREA_CONHECIMENTO) |> count() |> arrange(desc(n))
+                                         .default = NM_GRAU_ACADEMICO)) |> 
+  dplyr::mutate(
+    NM_DISCENTE = stringr::str_to_upper(
+      janitor::make_clean_names(NM_DISCENTE, case = "sentence", allow_dupes = TRUE)
+    )
+  )
 
 teses_dissertacoes_pb |> write_rds("dados/tidy/teses_dissertacoes_pb.rds")
 
 
 ##### Bolsas da Paraíba ---------------------
+bolsas_programa <- read_rds(paste0(PATH_DADOS, "bolsas_programas.rds"))
+
 bolsas_pb <- bolsas_programa |> 
-  filter(SG_UF_IES_ESTUDO == "PB")
+  filter(SG_UF_IES_ESTUDO == "PB") |> 
+  dplyr::mutate(
+    NM_DISCENTE = stringr::str_to_upper(
+      janitor::make_clean_names(NM_DISCENTE, case = "sentence", allow_dupes = TRUE)
+    )
+  )
 
 bolsas_pb |> write_rds("dados/tidy/bolsas_pb.rds")
 
@@ -312,11 +314,6 @@ bolsas_pb |> write_rds("dados/tidy/bolsas_pb.rds")
 # ID_PESSOA_PART_EXTERNO. 
 # Se um artigo foi publicado quando o estudante já se formou, ele deve aparecer
 # com ID_PESSOA_EGRESSO == ID_PESSOA e NM_AUTOR. 
-
-# producao_artigos_periodicos <- read_rds(paste0(PATH_DADOS, "producao_artigos_periodicos.rds"))
-# autor_producao_periodicos <- read_rds(paste0(PATH_DADOS, "autor_producao_periodicos.rds"))
-
-producao_artigos_periodicos |> 
 
 artigos_autor <- producao_artigos_periodicos |> 
   select(ID_ADD_PRODUCAO_INTELECTUAL, NM_PRODUCAO, CD_PROGRAMA_IES,
@@ -334,7 +331,12 @@ artigos_autor <- producao_artigos_periodicos |>
                 .names = "{sub('ID_PESSOA_', '', .col)}")) |> 
   mutate(ID_PESSOA = coalesce(ID_PESSOA_DISCENTE, ID_PESSOA_DOCENTE, 
                               ID_PESSOA_EGRESSO, ID_PESSOA_POS_DOC, 
-                              ID_PESSOA_PART_EXTERNO))
+                              ID_PESSOA_PART_EXTERNO)) |> 
+  dplyr::mutate(
+    NM_DISCENTE = stringr::str_to_upper(
+      janitor::make_clean_names(NM_DISCENTE, case = "sentence", allow_dupes = TRUE)
+    )
+  ) 
 
 # Filtrar para Programa de Pós-Graduação da Paraíba
 ies_uf <-  read_rds("dados/tidy/ies_uf.rds")
