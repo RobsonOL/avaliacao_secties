@@ -333,8 +333,8 @@ artigos_autor <- producao_artigos_periodicos |>
                               ID_PESSOA_EGRESSO, ID_PESSOA_POS_DOC, 
                               ID_PESSOA_PART_EXTERNO)) |> 
   dplyr::mutate(
-    NM_DISCENTE = stringr::str_to_upper(
-      janitor::make_clean_names(NM_DISCENTE, case = "sentence", allow_dupes = TRUE)
+    NM_AUTOR = stringr::str_to_upper(
+      janitor::make_clean_names(NM_AUTOR, case = "sentence", allow_dupes = TRUE)
     )
   ) 
 
