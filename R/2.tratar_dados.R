@@ -24,11 +24,6 @@ get_mode <- function(x) {
 
 ##### Criar dimensao 'discente' -----
 dim_discentes <- discentes_pb |> 
-  dplyr::mutate(
-    NM_DISCENTE = stringr::str_to_upper(
-      janitor::make_clean_names(NM_DISCENTE, case = "sentence", allow_dupes = TRUE)
-    )
-  ) |> 
   dplyr::group_by(
     NM_DISCENTE, AN_NASCIMENTO_DISCENTE
   ) |> 
