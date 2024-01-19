@@ -123,3 +123,11 @@ artigos_qualis <- artigos_autor_pb |>
   dplyr::rowwise() |> 
   dplyr::mutate(TOTAL_ARTIGOS = sum(c_across(starts_with('ARTIGO_'))))
 
+
+###### Unir bases de discentes, bolsistas, teses e publicações --------------
+
+df_discentes_bolsa_tese_pub <- df_discentes_bolsa_tese |>
+  left_join(artigos_qualis, by = "ID_PESSOA")
+
+df_discentes_bolsa_tese_pub |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
+
