@@ -54,7 +54,7 @@ df_discentes <- dim_discentes |>
   dplyr::group_by(ID_PESSOA, NM_DISCENTE, AN_NASCIMENTO_DISCENTE, NR_DOCUMENTO_DISCENTE,
                   GENERO, DS_GRAU_ACADEMICO_DISCENTE, CD_PROGRAMA_IES,
                   SG_ENTIDADE_ENSINO, NM_AREA_AVALIACAO) |> 
-  dplyr::reframe(DT_MATRICULA = first(DT_MATRICULA_DISCENTE)) |> 
+  dplyr::summarise(DT_MATRICULA = first(DT_MATRICULA_DISCENTE)) |> 
   dplyr::ungroup() |> 
   dplyr::distinct()
 
@@ -135,8 +135,25 @@ artigos_qualis <- artigos_autor_pb |>
 
 ###### Unir bases de discentes, bolsistas, teses e publicações --------------
 
+ies_uf <- read_rds("dados/tidy/ies_uf.rds") |> 
+  dplyr::rename(CD_PROGRAMA_IES = CD_PROGRAMA,
+                NM_PROGRAMA_IES = NM_PROGRAMA) |> 
+  dplyr::select(NM_PROGRAMA_IES, CD_PROGRAMA_IES) |> 
+  dplyr::distinct(CD_PROGRAMA_IES, .keep_all = TRUE)
+
+
 df_discentes_bolsa_tese_pub <- df_discentes_bolsa_tese |>
-  dplyr::left_join(artigos_qualis, by = "ID_PESSOA")
+  dplyr::left_join(artigos_qualis, by = "ID_PESSOA") |> 
+  dplyr::mutate(across(starts_with("ARTIGO"), ~ replace_na(., 0))) |> 
+  dplyr::mutate(across(starts_with("TOTAL_ARTIGOS"), ~ replace_na(., 0))) |> 
+  dplyr::rename(NM_DISSERTACAO_TESE = NM_PRODUCAO) |> 
+  dplyr::left_join(ies_uf, by = "CD_PROGRAMA_IES") |> 
+  dplyr::mutate(IDADE_DISCENTE_MATRICULA = lubridate::year(DT_MATRICULA) - AN_NASCIMENTO_DISCENTE) |> 
+  dplyr::relocate(c(DT_TITULACAO, MESES_FORMACAO, NM_DISSERTACAO_TESE), .after = DT_MATRICULA) |> 
+  dplyr::relocate(NM_PROGRAMA_IES, .after = CD_PROGRAMA_IES) |> 
+  dplyr::relocate(IDADE_DISCENTE_MATRICULA, .after = AN_NASCIMENTO_DISCENTE) |> 
+  dplyr::arrange(NM_DISCENTE, DT_MATRICULA)
+
 
 df_discentes_bolsa_tese_pub |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
 
