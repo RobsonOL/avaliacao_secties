@@ -23,3 +23,20 @@
 |Detalhes da Produção Intelectual Técnica de Programas de Pós-Graduação Stricto Sensu no Brasil |NA    |Produto Intelectual (ex. Artigo em periódico) |ID_PRODUCAO_INTELECTUAL                   |AN_BASE           |        2017|      2020|https://dadosabertos.capes.gov.br/dataset/2017-a-2020-detalhes-da-producao-intelectual-bibliografica-de-programas-de-pos-graduacao |
 |Autor da Produção Intelectual de Programas de Pós-Graduação Stricto Sensu no Brasil            |CAPES |Autor                                         |ID_PESSOA_DISCENTE, ID_PESSOA_DOCENTE,... |AN_BASE           |        2017|      2020|https://dadosabertos.capes.gov.br/dataset/2017-a-2020-autor-da-producao-intelectual-de-programas-de-pos-graduacao-stricto-sensu    |
 |Bolsas e Auxílios Pagos                                                                        |CNPQ  |Bolsistas                                     |Nome do Beneficiário                      |Ano de Referência |        2002|      2023|https://dadosabertos.cnpq.br/dataset?q=bolsas&sort=score+desc%2C+metadata_modified+desc                                            |
+
+# Indicadores
+
+Os indicadores serão calculados para as modalidades Mestrado e Doutorado, diferenciando entre
+bolsistas Fapesq, bolsistas não-Fapesq e não bolsitas. Para os indicadores, temos:
+
+  - Número de bolsistas
+  - Taxa de titulação
+  - Tempo médio das bolsas
+  - Tempo médio de conclusão
+  - Estratificação por gênero e idade
+  
+Em relação à produção acadêmica
+
+  - Quantidade de produção por tipo
+  - Proporção de artigos acadêmicos por Qualis
+  - Proporção de artigos acadêmicos por quartil
