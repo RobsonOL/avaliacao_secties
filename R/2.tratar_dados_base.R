@@ -76,25 +76,29 @@ df_discentes <- dim_discentes |>
 
 ###### Informações de Bolsa --------------
 # FIXME: Base de bolsas: Discentes como LORENA MARIA AUGUSTO PEQUENO aparecem repetidas vezes no mesmo ano.
-# A única diferença é o total de bolsas recebidas no ano. Assim, vou considerar a maior quantidade de bolsas recebidas no ano.
-# E remover as demais. Me parece que a base é alimentada diversas vezes no mesmo ano.
-df_bolsas <- bolsas_pb |> 
-  dplyr::filter(
-    ANO >= 2017,
-    DS_NIVEL %in% c("DOUTORADO", "MESTRADO")
-    ) |> 
-  # FIXME: Dentro de um mesmo ano, alguém pode receber diferentes bolsas
-  dplyr::group_by(
-    ID_PESSOA, ANO
-    ) |> 
-  dplyr::filter(
-    QT_BOLSA_ANO == max(QT_BOLSA_ANO)
-    ) |> 
-  dplyr::slice(1)  |> 
-  dplyr::ungroup() |> 
-  dplyr::group_by(
-    NM_DISCENTE, ID_PESSOA, DS_NIVEL, CD_PROGRAMA_PPG
-    ) |> 
+# O PPG pode renovar a bolsa (da mesma agência) dentro de um mesmo ano. Assim, 
+# As diversas ocorrências serão somadas.
+df_bolsas <- bolsas_pb |>
+  dplyr::filter(ANO >= 2017,
+                DS_NIVEL %in% c("DOUTORADO", "MESTRADO")) |>
+  select(
+    ANO,
+    ID_PESSOA,
+    NM_DISCENTE,
+    SG_PROGRAMA_CAPES,
+    QT_BOLSA_ANO,
+    VL_BOLSA_ANO,
+    DS_NIVEL,
+    NM_PROGRAMA_PPG,
+    CD_PROGRAMA_PPG
+  ) |>
+  dplyr::group_by(ID_PESSOA, ANO, DS_NIVEL, CD_PROGRAMA_PPG) |>
+  dplyr::mutate(QT_BOLSA_ANO = sum(QT_BOLSA_ANO),
+                VL_BOLSA_ANO = sum(VL_BOLSA_ANO)) |>
+  dplyr::ungroup() |>
+  distinct(ANO, NM_DISCENTE, DS_NIVEL,
+           .keep_all = T) |>
+dplyr::group_by(NM_DISCENTE, ID_PESSOA, DS_NIVEL, CD_PROGRAMA_PPG) |>
   dplyr::reframe(
     QT_BOLSA_TOTAL = sum(QT_BOLSA_ANO),
     VL_BOLSA_TOTAL = sum(VL_BOLSA_ANO),
@@ -102,18 +106,18 @@ df_bolsas <- bolsas_pb |>
     VL_BOLSA_FAPESQ = ifelse(SG_PROGRAMA_CAPES == "FAPESQ", sum(VL_BOLSA_ANO), 0),
     QT_BOLSA_NAO_FAPESQ = ifelse(SG_PROGRAMA_CAPES != "FAPESQ", sum(QT_BOLSA_ANO), 0),
     VL_BOLSA_NAO_FAPESQ = ifelse(SG_PROGRAMA_CAPES != "FAPESQ", sum(VL_BOLSA_ANO), 0)
-    ) |> 
-  dplyr::ungroup() |> 
+  ) |>
+  dplyr::ungroup() |>
   dplyr::mutate(
-    BOLSA_APENAS_FAPESQ = if_else(QT_BOLSA_FAPESQ > 0 & QT_BOLSA_NAO_FAPESQ == 0, 1, 0),
-    BOLSA_MUDOU = if_else(QT_BOLSA_FAPESQ > 0 & QT_BOLSA_NAO_FAPESQ > 0, 1, 0)
-    ) |>
-  dplyr::rename(
-    DS_GRAU_ACADEMICO_DISCENTE = DS_NIVEL,
-    CD_PROGRAMA_IES = CD_PROGRAMA_PPG
-    ) |> 
+    BOLSA_APENAS_FAPESQ = if_else(QT_BOLSA_FAPESQ > 0 &
+                                    QT_BOLSA_NAO_FAPESQ == 0, 1, 0),
+    BOLSA_MUDOU = if_else(QT_BOLSA_FAPESQ > 0 &
+                            QT_BOLSA_NAO_FAPESQ > 0, 1, 0)
+  ) |>
+  dplyr::rename(DS_GRAU_ACADEMICO_DISCENTE = DS_NIVEL,
+                CD_PROGRAMA_IES = CD_PROGRAMA_PPG) |>
   dplyr::distinct()
-  
+
 
 df_discentes_bolsa <- df_discentes |>
   dplyr::mutate(
@@ -183,7 +187,6 @@ artigos_qualis <- artigos_autor_pb |>
 
 
 ###### Unir bases de discentes, bolsistas, teses e publicações --------------
-
 ies_uf <- read_rds("dados/tidy/ies_uf.rds") |> 
   dplyr::rename(
     CD_PROGRAMA_IES = CD_PROGRAMA,
@@ -215,6 +218,8 @@ base_capes <- df_discentes_bolsa_tese |>
 
 base_capes |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
 
-
-base_capes |> 
-  filter(ID_PESSOA == 1241687) |> View()
+# base_capes |> 
+#   filter(ID_PESSOA == 1241687) |> View()
+# 
+# base_capes |> 
+#   filter(ID_PESSOA == 2790152) |> View()
