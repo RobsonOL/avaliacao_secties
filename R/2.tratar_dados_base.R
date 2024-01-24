@@ -142,7 +142,7 @@ ies_uf <- read_rds("dados/tidy/ies_uf.rds") |>
   dplyr::distinct(CD_PROGRAMA_IES, .keep_all = TRUE)
 
 
-df_discentes_bolsa_tese_pub <- df_discentes_bolsa_tese |>
+base_capes <- df_discentes_bolsa_tese |>
   dplyr::left_join(artigos_qualis, by = "ID_PESSOA") |> 
   dplyr::mutate(across(starts_with("ARTIGO"), ~ replace_na(., 0))) |> 
   dplyr::mutate(across(starts_with("TOTAL_ARTIGOS"), ~ replace_na(., 0))) |> 
@@ -152,11 +152,14 @@ df_discentes_bolsa_tese_pub <- df_discentes_bolsa_tese |>
   dplyr::relocate(c(DT_TITULACAO, MESES_FORMACAO, NM_DISSERTACAO_TESE), .after = DT_MATRICULA) |> 
   dplyr::relocate(NM_PROGRAMA_IES, .after = CD_PROGRAMA_IES) |> 
   dplyr::relocate(IDADE_DISCENTE_MATRICULA, .after = AN_NASCIMENTO_DISCENTE) |> 
-  dplyr::arrange(NM_DISCENTE, DT_MATRICULA)
-
-
-df_discentes_bolsa_tese_pub |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
-
+  dplyr::arrange(NM_DISCENTE, DT_MATRICULA) |> 
+  dplyr::mutate(NM_DISSERTACAO_TESE = stringr::str_to_upper(
+    janitor::make_clean_names(NM_DISSERTACAO_TESE, case = "sentence", allow_dupes = TRUE))) 
 
 
 
+base_capes |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
+
+
+base_capes |> 
+  filter(ID_PESSOA == 1241687) |> View()
