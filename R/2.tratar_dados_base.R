@@ -69,7 +69,8 @@ df_discentes <- dim_discentes |>
     SG_ENTIDADE_ENSINO, NM_AREA_AVALIACAO
     ) |> 
   dplyr::summarise(
-    DT_MATRICULA = dplyr::first(DT_MATRICULA_DISCENTE)
+    DT_MATRICULA = dplyr::first(DT_MATRICULA_DISCENTE),
+    NM_SITUACAO_DISCENTE = NM_SITUACAO_DISCENTE[which.max(DT_SITUACAO_DISCENTE)]
     ) |> 
   dplyr::ungroup() |> 
   dplyr::distinct()
@@ -206,6 +207,7 @@ base_capes <- df_discentes_bolsa_tese |>
 
 
 base_capes |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
+
 
 # base_capes |> 
 #   filter(ID_PESSOA == 1241687) |> View()
