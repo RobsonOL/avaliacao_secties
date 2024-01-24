@@ -81,17 +81,6 @@ df_discentes <- dim_discentes |>
 df_bolsas <- bolsas_pb |>
   dplyr::filter(ANO >= 2017,
                 DS_NIVEL %in% c("DOUTORADO", "MESTRADO")) |>
-  select(
-    ANO,
-    ID_PESSOA,
-    NM_DISCENTE,
-    SG_PROGRAMA_CAPES,
-    QT_BOLSA_ANO,
-    VL_BOLSA_ANO,
-    DS_NIVEL,
-    NM_PROGRAMA_PPG,
-    CD_PROGRAMA_PPG
-  ) |>
   dplyr::group_by(ID_PESSOA, ANO, DS_NIVEL, CD_PROGRAMA_PPG) |>
   dplyr::mutate(QT_BOLSA_ANO = sum(QT_BOLSA_ANO),
                 VL_BOLSA_ANO = sum(VL_BOLSA_ANO)) |>
