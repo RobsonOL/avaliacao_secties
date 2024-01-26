@@ -325,23 +325,17 @@ bolsas_pb |> write_rds("dados/tidy/bolsas_pb.rds")
 
 ##### Produção Intelectual da Paraíba ---------------------
 
-# ID_PESSOA é unico para cada indivíduo. Existe 5 colunas com ID_PESSOA:
-# ID_PESSOA_DISCENTE; ID_PESSOA_DOCENTE; ID_PESSOA_POS_DOC; ID_PESSOA_EGRESSO;
-# ID_PESSOA_PART_EXTERNO. 
-# Se um artigo foi publicado quando o estudante já se formou, ele deve aparecer
-# com ID_PESSOA_EGRESSO == ID_PESSOA e NM_AUTOR. 
+# producao_artigos_periodicos <- read_rds(paste0(PATH_DADOS, "producao_artigos_periodicos.rds"))
+# autor_producao_periodicos <- read_rds(paste0(PATH_DADOS, "autor_producao_periodicos.rds"))
 
-# Filtrar para Programa de Pós-Graduação da Paraíba
-ies_uf <-  read_rds("dados/tidy/ies_uf.rds")
-cd_programa_paraiba <- ies_uf |> filter(SG_UF_IES == 'PB') |> pull(CD_PROGRAMA)
+INSTITUICOES_PB <- c("UFPB/AREIA", "UFPB/J.P.", "IFPB", "UFPB/RT", "UEPB", "UFPB-JP", "UFPB-RT", "UFPB", "UFCG")
 
 artigos_autor_pb <- producao_artigos_periodicos |> 
-  filter(CD_PROGRAMA_IES %in% cd_programa_paraiba) |> 
-  filter(AN_BASE >= 2017) |> 
+  dplyr::filter(SG_ENTIDADE_ENSINO %in% INSTITUICOES_PB) |> 
   select(ID_ADD_PRODUCAO_INTELECTUAL, NM_PRODUCAO, CD_PROGRAMA_IES,
          NM_PROGRAMA_IES, SG_ENTIDADE_ENSINO, SG_ENTIDADE_ENSINO,
          AN_BASE, NM_SUBTIPO_PRODUCAO, NM_AREA_CONCENTRACAO,
-         SG_ESTRATO, DS_TITULO_PADRONIZADO, CD_IDENTIFICADOR_VEICULO, ) |> 
+         SG_ESTRATO, DS_TITULO_PADRONIZADO, CD_IDENTIFICADOR_VEICULO) |> 
   rename(ANO = AN_BASE) |> 
   left_join(autor_producao_periodicos |> 
               select(ID_ADD_PRODUCAO_INTELECTUAL, 
