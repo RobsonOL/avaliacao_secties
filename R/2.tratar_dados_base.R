@@ -49,31 +49,43 @@ df_discentes <- dim_discentes |>
       "Male" ~ "MASCULINO",
       "Female" ~ "FEMININO")
     ) |> 
+  dplyr::distinct(ID_PESSOA, .keep_all = TRUE) |> 
   dplyr::left_join(
     discentes_pb |> 
       dplyr::filter(
         dplyr::between(ANO, 2017, 2020) # FAPESQ só começou a ser informado em 2017
         ) |> 
       dplyr::select(
-        NM_DISCENTE, ID_PESSOA, ANO, 
-        DT_MATRICULA_DISCENTE,
-        NM_SITUACAO_DISCENTE, DT_SITUACAO_DISCENTE,
-        DS_GRAU_ACADEMICO_DISCENTE,
+        ANO, ID_PESSOA,
+        NM_SITUACAO_DISCENTE, DT_SITUACAO_DISCENTE, DT_MATRICULA_DISCENTE,
+        DS_GRAU_ACADEMICO_DISCENTE, NM_PAIS_NACIONALIDADE_DISCENTE,
         SG_ENTIDADE_ENSINO, CD_PROGRAMA_IES, NM_PROGRAMA_IES, 
+        NM_MUNICIPIO_PROGRAMA_IES, CD_CONCEITO_CURSO, CD_CONCEITO_PROGRAMA,
+        QT_MES_TITULACAO, NM_ORIENTADOR_PRINCIPAL,
         CD_AREA_AVALIACAO, NM_AREA_AVALIACAO),
-    by = c("NM_DISCENTE", "ID_PESSOA")
+    by = c("ID_PESSOA")
     ) |> 
   dplyr::group_by(
-    ID_PESSOA, NM_DISCENTE, AN_NASCIMENTO_DISCENTE, NR_DOCUMENTO_DISCENTE,
-    GENERO, DS_GRAU_ACADEMICO_DISCENTE, CD_PROGRAMA_IES,
-    SG_ENTIDADE_ENSINO, NM_AREA_AVALIACAO
-    ) |> 
+    ID_PESSOA,
+    NM_DISCENTE,
+    AN_NASCIMENTO_DISCENTE,
+    NR_DOCUMENTO_DISCENTE,
+    GENERO,
+    DS_GRAU_ACADEMICO_DISCENTE,
+    CD_PROGRAMA_IES,
+    NM_MUNICIPIO_PROGRAMA_IES,
+    SG_ENTIDADE_ENSINO,
+    NM_AREA_AVALIACAO,
+    NM_PAIS_NACIONALIDADE_DISCENTE
+  ) |> 
   dplyr::summarise(
     DT_MATRICULA = dplyr::first(DT_MATRICULA_DISCENTE),
     NM_SITUACAO_DISCENTE = NM_SITUACAO_DISCENTE[which.max(DT_SITUACAO_DISCENTE)]
     ) |> 
   dplyr::ungroup() |> 
   dplyr::distinct()
+
+
 
 ###### Informações de Bolsa --------------
 # FIXME: Base de bolsas: Discentes como LORENA MARIA AUGUSTO PEQUENO aparecem repetidas vezes no mesmo ano.
@@ -143,7 +155,8 @@ df_discentes_bolsa_tese <- df_discentes_bolsa |>
     ) |> 
   dplyr::mutate(
     TEM_TESE = ifelse(!is.na(NM_PRODUCAO), 1, 0)
-    ) 
+    ) |> 
+  dplyr::mutate(NM_PRODUCAO = if_else(NM_PRODUCAO == "NA", NA, NM_PRODUCAO))
 
 
 ###### Informações de Publicação --------------
@@ -158,14 +171,14 @@ artigos_qualis <- artigos_autor_pb |>
     !is.na(SG_ESTRATO), SG_ESTRATO != "NI"
     ) |>
   dplyr::group_by(
-    ID_PESSOA, SG_ESTRATO
+    NM_AUTOR, SG_ESTRATO
     ) |>
   dplyr::summarise(
     ARTIGOS = n()
     ) |> 
   dplyr::ungroup() |> 
   tidyr::pivot_wider(
-    id_cols = ID_PESSOA, 
+    id_cols = NM_AUTOR, 
     names_from = SG_ESTRATO, 
     values_from = ARTIGOS, 
     names_prefix = "ARTIGO_", values_fill = 0
@@ -177,6 +190,7 @@ artigos_qualis <- artigos_autor_pb |>
 
 
 ###### Unir bases de discentes, bolsistas, teses e publicações --------------
+
 ies_uf <- read_rds("dados/tidy/ies_uf.rds") |> 
   dplyr::rename(
     CD_PROGRAMA_IES = CD_PROGRAMA,
@@ -191,7 +205,7 @@ ies_uf <- read_rds("dados/tidy/ies_uf.rds") |>
 
 
 base_capes <- df_discentes_bolsa_tese |>
-  dplyr::left_join(artigos_qualis, by = "ID_PESSOA") |> 
+  dplyr::left_join(artigos_qualis, by = c("NM_DISCENTE"="NM_AUTOR")) |> 
   dplyr::mutate(across(starts_with("ARTIGO"), ~ replace_na(., 0))) |> 
   dplyr::mutate(across(starts_with("TOTAL_ARTIGOS"), ~ replace_na(., 0))) |> 
   dplyr::rename(NM_DISSERTACAO_TESE = NM_PRODUCAO) |> 
@@ -205,12 +219,4 @@ base_capes <- df_discentes_bolsa_tese |>
     janitor::make_clean_names(NM_DISSERTACAO_TESE, case = "sentence", allow_dupes = TRUE))) 
 
 
-
 base_capes |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
-
-
-# base_capes |> 
-#   filter(ID_PESSOA == 1241687) |> View()
-# 
-# base_capes |> 
-#   filter(ID_PESSOA == 2790152) |> View()
