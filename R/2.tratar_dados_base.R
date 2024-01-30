@@ -1,17 +1,17 @@
-#### Packages -----------
+# PACOTES ----
 rm(list = ls())
 
 #install.packages("pacman")
 pacman::p_load(tidyverse, janitor, readr, tidyr, genderBR)
 
-# DADOS ------
+# DADOS ----
 
 discentes_pb <- readr::read_rds("dados/tidy/discentes_pb.rds")
 teses_pb <- readr::read_rds("dados/tidy/teses_dissertacoes_pb.rds")
 bolsas_pb <- readr::read_rds("dados/tidy/bolsas_pb.rds") 
 artigos_autor_pb <- readr::read_rds("dados/tidy/artigos_autor_pb.rds")
 
-###### Informações básicas do Discente -------
+## Dimensão Discente ----
 
 # Funcao para calcular a moda
 get_mode <- function(x) {
@@ -22,7 +22,6 @@ get_mode <- function(x) {
 }
 
 
-##### Criar dimensao 'discente' -----
 dim_discentes <- discentes_pb |> 
   dplyr::filter(
     dplyr::between(ANO, 2017, 2020)
@@ -83,47 +82,85 @@ df_discentes <- dim_discentes |>
     NM_SITUACAO_DISCENTE = NM_SITUACAO_DISCENTE[which.max(DT_SITUACAO_DISCENTE)]
     ) |> 
   dplyr::ungroup() |> 
-  dplyr::distinct()
+  dplyr::distinct() |> 
+  dplyr::mutate(
+    SG_ENTIDADE_ENSINO = dplyr::case_match(
+      SG_ENTIDADE_ENSINO,
+      "UFPB-JP" ~ "UFPB",
+      "UFPB-RT" ~ "UFPB",
+      "UFPB-AREIA" ~ "UFPB",
+      .default = SG_ENTIDADE_ENSINO)
+    )
+  
 
-
-
-###### Informações de Bolsa --------------
-# FIXME: Base de bolsas: Discentes como LORENA MARIA AUGUSTO PEQUENO aparecem repetidas vezes no mesmo ano.
-# O PPG pode renovar a bolsa (da mesma agência) dentro de um mesmo ano. Assim, 
-# As diversas ocorrências serão somadas.
-bolsas_pb |> group_by(SG_PROGRAMA_CAPES) |> tally() |> arrange(desc(n))
+## Bolsas ----
 
 df_bolsas <- bolsas_pb |>
+  dplyr::select(-c(DS_PROJETO, CONCEITO_ANO,
+                   contains(
+                     c("ORIGEM", "TAXA", "MULTICAMPI", "STATUS")
+                   ))) |>
   dplyr::filter(ANO >= 2017,
                 DS_NIVEL %in% c("DOUTORADO", "MESTRADO")) |>
-  dplyr::group_by(ID_PESSOA, ANO, DS_NIVEL, CD_PROGRAMA_PPG) |>
-  dplyr::mutate(QT_BOLSA_ANO = sum(QT_BOLSA_ANO),
-                VL_BOLSA_ANO = sum(VL_BOLSA_ANO)) |>
-  dplyr::ungroup() |>
-  distinct(ANO, NM_DISCENTE, DS_NIVEL,
-           .keep_all = T) |>
-dplyr::group_by(NM_DISCENTE, ID_PESSOA, DS_NIVEL, CD_PROGRAMA_PPG) |>
-  dplyr::reframe(
-    QT_BOLSA_TOTAL = sum(QT_BOLSA_ANO),
-    VL_BOLSA_TOTAL = sum(VL_BOLSA_ANO),
-    QT_BOLSA_FAPESQ = ifelse(SG_PROGRAMA_CAPES == "FAPESQ", sum(QT_BOLSA_ANO), 0),
-    VL_BOLSA_FAPESQ = ifelse(SG_PROGRAMA_CAPES == "FAPESQ", sum(VL_BOLSA_ANO), 0),
-    QT_BOLSA_CAPES = ifelse(SG_PROGRAMA_CAPES == "DS", sum(QT_BOLSA_ANO), 0),
-    VL_BOLSA_CAPES = ifelse(SG_PROGRAMA_CAPES == "DS", sum(VL_BOLSA_ANO), 0),
-    QT_BOLSA_OUTRAS = ifelse(!SG_PROGRAMA_CAPES %in% c("FAPESQ", "SG"), sum(QT_BOLSA_ANO), 0),
-    VL_BOLSA_OUTRAS = ifelse(!SG_PROGRAMA_CAPES %in% c("FAPESQ", "SG"), sum(VL_BOLSA_ANO), 0),
-    TIPO_BOLSA_MAIS_COMUM = first(get_mode(SG_PROGRAMA_CAPES))
+  dplyr::mutate(
+    SG_IES_ESTUDO = dplyr::case_match(
+      SG_IES_ESTUDO,
+      "UFPB-JP" ~ "UFPB",
+      "UFPB-RT" ~ "UFPB",
+      "UFPB-AREIA" ~ "UFPB",
+      .default = SG_IES_ESTUDO
+    )
   ) |>
+  dplyr::rename(SG_ENTIDADE_ENSINO = SG_IES_ESTUDO) |>
   dplyr::mutate(
-    TIPO_BOLSA_MAIS_COMUM = ifelse(TIPO_BOLSA_MAIS_COMUM == "DS", "CAPES", TIPO_BOLSA_MAIS_COMUM)
-  ) |> 
-  dplyr::ungroup() |>
+    SG_PROGRAMA_CAPES = case_when(
+      SG_PROGRAMA_CAPES == "DS" ~ "CAPES",
+      SG_PROGRAMA_CAPES == "FAPESQ" ~ "FAPESQ",
+      !SG_PROGRAMA_CAPES %in% c("DS", "FAPESQ") ~ "OUTROS"
+    )
+  ) |>
+  dplyr::group_by(ID_PESSOA, ANO, DS_NIVEL, CD_PROGRAMA_PPG, SG_ENTIDADE_ENSINO, SG_PROGRAMA_CAPES) |>
+  dplyr::mutate(QT_BOLSA_ANO = sum(QT_BOLSA_ANO),
+                VL_BOLSA_ANO = sum(VL_BOLSA_ANO)) |> 
+  dplyr::distinct(.keep_all = TRUE) |> 
+  dplyr::group_by(NM_DISCENTE,
+                  ID_PESSOA,
+                  ANO,
+                  DS_NIVEL,
+                  CD_PROGRAMA_PPG,
+                  SG_ENTIDADE_ENSINO) |>
+  tidyr::pivot_wider(names_from = SG_PROGRAMA_CAPES,
+                     values_from = c(QT_BOLSA_ANO, VL_BOLSA_ANO)) |> 
   dplyr::mutate(
-    BOLSA_APENAS_FAPESQ = if_else(QT_BOLSA_FAPESQ > 0 &
-                                    QT_BOLSA_FAPESQ == QT_BOLSA_TOTAL, 1, 0)) |>
+    QT_BOLSA_TOTAL = sum(
+      QT_BOLSA_ANO_CAPES,
+      QT_BOLSA_ANO_FAPESQ,
+      QT_BOLSA_ANO_OUTROS,
+      na.rm = TRUE
+    ),
+    VL_BOLSA_TOTAL = sum(
+      VL_BOLSA_ANO_CAPES,
+      VL_BOLSA_ANO_FAPESQ,
+      VL_BOLSA_ANO_OUTROS,
+      na.rm = TRUE
+    )
+  ) |>
+  dplyr::ungroup() |> 
+  dplyr::group_by(NM_DISCENTE, ID_PESSOA, DS_NIVEL, CD_PROGRAMA_PPG, SG_ENTIDADE_ENSINO) |>
+  dplyr::summarise(across(starts_with(c("QT_", "VL_")), sum, na.rm = TRUE)) |>
+  dplyr::rename_with(~ stringr::str_remove(., "ANO_")) |> dplyr::mutate(
+    BOLSA_APENAS_FAPESQ = case_when(
+      QT_BOLSA_CAPES == 0 & QT_BOLSA_FAPESQ > 0 & QT_BOLSA_OUTROS == 0 ~ 1,
+      TRUE ~ 0
+    ),
+    TIPO_BOLSA_MAIS_COMUM = case_when(
+      QT_BOLSA_CAPES > QT_BOLSA_FAPESQ & QT_BOLSA_CAPES > QT_BOLSA_OUTROS ~ "CAPES",
+      QT_BOLSA_FAPESQ > QT_BOLSA_CAPES & QT_BOLSA_FAPESQ > QT_BOLSA_OUTROS ~ "FAPESQ",
+      QT_BOLSA_OUTROS > QT_BOLSA_CAPES & QT_BOLSA_OUTROS > QT_BOLSA_FAPESQ ~ "OUTROS",
+      TRUE ~ "MÚLTIPLAS BOLSAS")
+    ) |> 
   dplyr::rename(DS_GRAU_ACADEMICO_DISCENTE = DS_NIVEL,
-                CD_PROGRAMA_IES = CD_PROGRAMA_PPG) |>
-  dplyr::distinct()
+                CD_PROGRAMA_IES = CD_PROGRAMA_PPG)
 
 
 df_discentes_bolsa <- df_discentes |>
@@ -137,12 +174,10 @@ df_discentes_bolsa <- df_discentes |>
   dplyr::left_join(
     df_bolsas, 
     by = c("ID_PESSOA", "NM_DISCENTE",
-           "CD_PROGRAMA_IES", "DS_GRAU_ACADEMICO_DISCENTE")
+           "CD_PROGRAMA_IES", "DS_GRAU_ACADEMICO_DISCENTE", "SG_ENTIDADE_ENSINO")
     ) 
 
-
-
-###### Tese e Dissertação -------------
+## Tese e Dissertação ----
 
 df_discentes_bolsa_tese <- df_discentes_bolsa |> 
   dplyr::left_join(
@@ -163,13 +198,14 @@ df_discentes_bolsa_tese <- df_discentes_bolsa |>
     ) |> 
   dplyr::mutate(NM_PRODUCAO = if_else(NM_PRODUCAO == "NA", NA, NM_PRODUCAO))
 
+# Casos estranhos:
+# df_discentes_bolsa_tese |> group_by(ID_PESSOA, CD_PROGRAMA_IES, DS_GRAU_ACADEMICO_DISCENTE) |> 
+#   tally() |> filter(n > 1) |> View()
 
-###### Informações de Publicação --------------
 
-# TODO: Publicacoes de 2017-2020 possuem o mesmo ANO == 2017. A não ser que se recupere o ano com DOI.
-# O ano de publicação está em PUBLICACAO_DETALHES:
-# https://dadosabertos.capes.gov.br/dataset/detalhes-da-producao-intelectual-artistica-2013a2016
-# https://dadosabertos.capes.gov.br/dataset/2017-a-2020-detalhes-da-producao-intelectual-bibliografica-de-programas-de-pos-graduacao
+
+
+## Publicações ----
 
 artigos_qualis <- artigos_autor_pb |> 
   dplyr::filter(
@@ -190,11 +226,11 @@ artigos_qualis <- artigos_autor_pb |>
     ) |> 
   dplyr::rowwise() |> 
   dplyr::mutate(
-    TOTAL_ARTIGOS = sum(c_across(starts_with('ARTIGO_')))
+    TOTAL_ARTIGOS = sum(c_across(starts_with('ARTIGO_')), na.rm = TRUE)
     ) 
 
 
-###### Unir bases de discentes, bolsistas, teses e publicações --------------
+## Base final ----
 
 ies_uf <- read_rds("dados/tidy/ies_uf.rds") |> 
   dplyr::rename(
@@ -222,14 +258,6 @@ base_capes <- df_discentes_bolsa_tese |>
   dplyr::arrange(NM_DISCENTE, DT_MATRICULA) |> 
   dplyr::mutate(NM_DISSERTACAO_TESE = stringr::str_to_upper(
     janitor::make_clean_names(NM_DISSERTACAO_TESE, case = "sentence", allow_dupes = TRUE))) |> 
-  dplyr::mutate(
-    SG_ENTIDADE_ENSINO = case_match(
-      SG_ENTIDADE_ENSINO,
-      "UFPB-JP" ~ "UFPB",
-      "UFPB-RT" ~ "UFPB",
-      "UFPB-AREIA" ~ "UFPB",
-      .default = SG_ENTIDADE_ENSINO)
-    ) |> 
   dplyr::mutate(NM_DISSERTACAO_TESE = dplyr::na_if(NM_DISSERTACAO_TESE, "NA"))
     
 
