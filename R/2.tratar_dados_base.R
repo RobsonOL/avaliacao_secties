@@ -216,7 +216,16 @@ base_capes <- df_discentes_bolsa_tese |>
   dplyr::relocate(IDADE_DISCENTE_MATRICULA, .after = AN_NASCIMENTO_DISCENTE) |> 
   dplyr::arrange(NM_DISCENTE, DT_MATRICULA) |> 
   dplyr::mutate(NM_DISSERTACAO_TESE = stringr::str_to_upper(
-    janitor::make_clean_names(NM_DISSERTACAO_TESE, case = "sentence", allow_dupes = TRUE))) 
+    janitor::make_clean_names(NM_DISSERTACAO_TESE, case = "sentence", allow_dupes = TRUE))) |> 
+  mutate(
+    SG_ENTIDADE_ENSINO = case_match(
+      SG_ENTIDADE_ENSINO,
+      "UFPB-JP" ~ "UFPB",
+      "UFPB-RT" ~ "UFPB",
+      "UFPB-AREIA" ~ "UFPB",
+      .default = SG_ENTIDADE_ENSINO)
+    )
+    
 
 
 base_capes |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
