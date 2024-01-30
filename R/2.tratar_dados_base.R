@@ -112,8 +112,11 @@ dplyr::group_by(NM_DISCENTE, ID_PESSOA, DS_NIVEL, CD_PROGRAMA_PPG) |>
     VL_BOLSA_CAPES = ifelse(SG_PROGRAMA_CAPES == "DS", sum(VL_BOLSA_ANO), 0),
     QT_BOLSA_OUTRAS = ifelse(!SG_PROGRAMA_CAPES %in% c("FAPESQ", "SG"), sum(QT_BOLSA_ANO), 0),
     VL_BOLSA_OUTRAS = ifelse(!SG_PROGRAMA_CAPES %in% c("FAPESQ", "SG"), sum(VL_BOLSA_ANO), 0),
-    TIPO_BOLSA_MAIS_COMUM = first(mode(SG_PROGRAMA_CAPES))
+    TIPO_BOLSA_MAIS_COMUM = first(get_mode(SG_PROGRAMA_CAPES))
   ) |>
+  dplyr::mutate(
+    TIPO_BOLSA_MAIS_COMUM = ifelse(TIPO_BOLSA_MAIS_COMUM == "DS", "CAPES", TIPO_BOLSA_MAIS_COMUM)
+  ) |> 
   dplyr::ungroup() |>
   dplyr::mutate(
     BOLSA_APENAS_FAPESQ = if_else(QT_BOLSA_FAPESQ > 0 &
