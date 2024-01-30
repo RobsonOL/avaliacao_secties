@@ -91,6 +91,8 @@ df_discentes <- dim_discentes |>
 # FIXME: Base de bolsas: Discentes como LORENA MARIA AUGUSTO PEQUENO aparecem repetidas vezes no mesmo ano.
 # O PPG pode renovar a bolsa (da mesma agência) dentro de um mesmo ano. Assim, 
 # As diversas ocorrências serão somadas.
+bolsas_pb |> group_by(SG_PROGRAMA_CAPES) |> tally() |> arrange(desc(n))
+
 df_bolsas <- bolsas_pb |>
   dplyr::filter(ANO >= 2017,
                 DS_NIVEL %in% c("DOUTORADO", "MESTRADO")) |>
@@ -106,16 +108,16 @@ dplyr::group_by(NM_DISCENTE, ID_PESSOA, DS_NIVEL, CD_PROGRAMA_PPG) |>
     VL_BOLSA_TOTAL = sum(VL_BOLSA_ANO),
     QT_BOLSA_FAPESQ = ifelse(SG_PROGRAMA_CAPES == "FAPESQ", sum(QT_BOLSA_ANO), 0),
     VL_BOLSA_FAPESQ = ifelse(SG_PROGRAMA_CAPES == "FAPESQ", sum(VL_BOLSA_ANO), 0),
-    QT_BOLSA_NAO_FAPESQ = ifelse(SG_PROGRAMA_CAPES != "FAPESQ", sum(QT_BOLSA_ANO), 0),
-    VL_BOLSA_NAO_FAPESQ = ifelse(SG_PROGRAMA_CAPES != "FAPESQ", sum(VL_BOLSA_ANO), 0)
+    QT_BOLSA_CAPES = ifelse(SG_PROGRAMA_CAPES == "DS", sum(QT_BOLSA_ANO), 0),
+    VL_BOLSA_CAPES = ifelse(SG_PROGRAMA_CAPES == "DS", sum(VL_BOLSA_ANO), 0),
+    QT_BOLSA_OUTRAS = ifelse(!SG_PROGRAMA_CAPES %in% c("FAPESQ", "SG"), sum(QT_BOLSA_ANO), 0),
+    VL_BOLSA_OUTRAS = ifelse(!SG_PROGRAMA_CAPES %in% c("FAPESQ", "SG"), sum(VL_BOLSA_ANO), 0),
+    TIPO_BOLSA_MAIS_COMUM = first(mode(SG_PROGRAMA_CAPES))
   ) |>
   dplyr::ungroup() |>
   dplyr::mutate(
     BOLSA_APENAS_FAPESQ = if_else(QT_BOLSA_FAPESQ > 0 &
-                                    QT_BOLSA_NAO_FAPESQ == 0, 1, 0),
-    BOLSA_MUDOU = if_else(QT_BOLSA_FAPESQ > 0 &
-                            QT_BOLSA_NAO_FAPESQ > 0, 1, 0)
-  ) |>
+                                    QT_BOLSA_FAPESQ == QT_BOLSA_TOTAL, 1, 0)) |>
   dplyr::rename(DS_GRAU_ACADEMICO_DISCENTE = DS_NIVEL,
                 CD_PROGRAMA_IES = CD_PROGRAMA_PPG) |>
   dplyr::distinct()
@@ -217,14 +219,15 @@ base_capes <- df_discentes_bolsa_tese |>
   dplyr::arrange(NM_DISCENTE, DT_MATRICULA) |> 
   dplyr::mutate(NM_DISSERTACAO_TESE = stringr::str_to_upper(
     janitor::make_clean_names(NM_DISSERTACAO_TESE, case = "sentence", allow_dupes = TRUE))) |> 
-  mutate(
+  dplyr::mutate(
     SG_ENTIDADE_ENSINO = case_match(
       SG_ENTIDADE_ENSINO,
       "UFPB-JP" ~ "UFPB",
       "UFPB-RT" ~ "UFPB",
       "UFPB-AREIA" ~ "UFPB",
       .default = SG_ENTIDADE_ENSINO)
-    )
+    ) |> 
+  dplyr::mutate(NM_DISSERTACAO_TESE = dplyr::na_if(NM_DISSERTACAO_TESE, "NA"))
     
 
 
