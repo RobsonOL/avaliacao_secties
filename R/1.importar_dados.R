@@ -323,7 +323,90 @@ bolsas_pb <- bolsas_programa |>
 bolsas_pb |> write_rds("dados/tidy/bolsas_pb.rds")
 
 
-##### Produção Intelectual da Paraíba ---------------------
+
+## CNPQ ----
+
+# Bolsas de doutorado e mestrado na PB
+DADOS_CNPQ <- paste0(PATH_DADOS, "bolsas_cnpq/")
+
+colunas_selecionadas <- c("ano_referencia", "beneficiario", "linha_de_fomento", "modalidade",
+                          "programa_cn_pq", "grande_area", "area", "subarea", "sigla_uf_origem",
+                          "sigla_uf_destino", "instituicao_origem", "sigla_instituicao_destino", "valor_pago")
+
+colunas_numericas <- c("ano_referencia", "valor_pago")
+
+cnpq_2017 <-
+  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2017.zip")) |> janitor::clean_names() |>
+  dplyr::select(all_of(colunas_selecionadas)) |> 
+  dplyr::mutate(across(colunas_numericas, as.numeric))
+cnpq_2018 <-
+  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2018.zip")) |> janitor::clean_names() |>
+  dplyr::select(all_of(colunas_selecionadas)) |> 
+  dplyr::mutate(across(colunas_numericas, as.numeric))
+cnpq_2019 <-
+  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2019.zip")) |> janitor::clean_names() |>
+  dplyr::select(all_of(colunas_selecionadas)) |> 
+  dplyr::mutate(across(colunas_numericas, as.numeric))
+cnpq_2020 <-
+  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2020.zip")) |> janitor::clean_names() |>
+  select(-1) |> dplyr::select(all_of(colunas_selecionadas)) |> 
+  dplyr::mutate(across(colunas_numericas, as.numeric))
+cnpq_2021 <-
+  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2021.zip")) |> janitor::clean_names() |>
+  dplyr::select(all_of(colunas_selecionadas)) |> 
+  dplyr::mutate(across(colunas_numericas, as.numeric))
+cnpq_2022 <-
+  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2022.zip"), skip = 5) |> janitor::clean_names() |>
+  dplyr::select(all_of(colunas_selecionadas)) |> 
+  dplyr::mutate(across(colunas_numericas, as.numeric))
+
+
+cnpq <- dplyr::bind_rows(cnpq_2017, cnpq_2018, cnpq_2019, cnpq_2020, cnpq_2021, cnpq_2022) |> 
+  dplyr::filter(modalidade %in% c("GD - Doutorado", "GM - Mestrado")) |> 
+  dplyr::filter(sigla_uf_origem == "PB" & sigla_uf_destino == "PB") |> 
+  dplyr::select(ano_referencia, beneficiario, modalidade, sigla_instituicao_destino,
+                sigla_uf_destino, area, subarea, grande_area, valor_pago) |> 
+  dplyr::mutate(dplyr::across(
+    dplyr::where(is.character),
+    ~ stringr::str_to_upper(
+      janitor::make_clean_names(.x, case = "sentence", allow_dupes = TRUE)
+    ))) |> 
+  dplyr::mutate(
+    sigla_instituicao_destino = ifelse(
+      sigla_instituicao_destino == 'UFPB C GRANDE',
+      "UFPB",
+      sigla_instituicao_destino
+    )
+  ) |> 
+  dplyr::rename(
+    DS_NIVEL = modalidade,
+    NM_DISCENTE = beneficiario,
+    SG_ENTIDADE_ENSINO = sigla_instituicao_destino,
+    VL_BOLSA_ANO = valor_pago,
+    ANO = ano_referencia,
+    AREA = area,
+    SUBAREA = subarea,
+    GRANDE_AREA = grande_area
+  ) |> 
+  dplyr::mutate(DS_NIVEL = case_when(
+    DS_NIVEL == "GD DOUTORADO" ~ "DOUTORADO",
+    DS_NIVEL == "GM MESTRADO" ~ "MESTRADO"
+  )) |> 
+  dplyr::mutate(TIPO_BOLSA = "CNPQ") |> 
+  dplyr::select(
+    ANO,
+    NM_DISCENTE,
+    TIPO_BOLSA,
+    DS_NIVEL,
+    SG_ENTIDADE_ENSINO,
+    VL_BOLSA_ANO
+  ) |> 
+  dplyr::rename(DS_GRAU_ACADEMICO_DISCENTE = DS_NIVEL)
+
+
+cnpq |>  write_rds("dados/tidy/bolsas_cnpq_pb.rds")
+
+## Produção Intelectual da Paraíba ----
 
 # producao_artigos_periodicos <- read_rds(paste0(PATH_DADOS, "producao_artigos_periodicos.rds"))
 # autor_producao_periodicos <- read_rds(paste0(PATH_DADOS, "autor_producao_periodicos.rds"))
@@ -355,3 +438,6 @@ artigos_autor_pb <- producao_artigos_periodicos |>
   ) 
 
 artigos_autor_pb |> write_rds("dados/tidy/artigos_autor_pb.rds")
+
+
+

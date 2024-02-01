@@ -10,6 +10,7 @@ discentes_pb <- readr::read_rds("dados/tidy/discentes_pb.rds")
 teses_pb <- readr::read_rds("dados/tidy/teses_dissertacoes_pb.rds")
 bolsas_pb <- readr::read_rds("dados/tidy/bolsas_pb.rds") 
 artigos_autor_pb <- readr::read_rds("dados/tidy/artigos_autor_pb.rds")
+cnpq_pb <- read_rds("dados/tidy/bolsas_cnpq_pb.rds")
 
 ## Dimensão Discente ----
 
@@ -148,7 +149,8 @@ df_bolsas <- bolsas_pb |>
   dplyr::ungroup() |> 
   dplyr::group_by(NM_DISCENTE, ID_PESSOA, DS_NIVEL, CD_PROGRAMA_PPG, SG_ENTIDADE_ENSINO) |>
   dplyr::summarise(across(starts_with(c("QT_", "VL_")), sum, na.rm = TRUE)) |>
-  dplyr::rename_with(~ stringr::str_remove(., "ANO_")) |> dplyr::mutate(
+  dplyr::rename_with(~ stringr::str_remove(., "ANO_")) |> 
+  dplyr::mutate(
     BOLSA_APENAS_FAPESQ = case_when(
       QT_BOLSA_CAPES == 0 & QT_BOLSA_FAPESQ > 0 & QT_BOLSA_OUTROS == 0 ~ 1,
       TRUE ~ 0
@@ -261,5 +263,52 @@ base_capes <- df_discentes_bolsa_tese |>
   dplyr::mutate(NM_DISSERTACAO_TESE = dplyr::na_if(NM_DISSERTACAO_TESE, "NA"))
     
 
+## Adicionar bolsas CNPQ ----
+cnpq_discente <- cnpq_pb |> dplyr::group_by(NM_DISCENTE,
+                                         TIPO_BOLSA,
+                                         DS_GRAU_ACADEMICO_DISCENTE,
+                                         SG_ENTIDADE_ENSINO) |> 
+  dplyr::summarise(VL_BOLSA_ANO = sum(VL_BOLSA_ANO, na.rm = TRUE)) |> 
+  dplyr::ungroup() |> 
+  dplyr::rename(VL_BOLSA_CNPQ = VL_BOLSA_ANO) 
 
-base_capes |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
+
+
+
+base_capes_cnpq <- base_capes |>
+  dplyr::left_join(
+    cnpq_discente,
+    by = c(
+      "NM_DISCENTE",
+      "DS_GRAU_ACADEMICO_DISCENTE",
+      "SG_ENTIDADE_ENSINO"
+    )
+  ) |>
+  dplyr::relocate(VL_BOLSA_CNPQ, .after = VL_BOLSA_FAPESQ) |>
+  dplyr::rowwise() |>
+  dplyr::mutate(VL_BOLSA_TOTAL = 0) |>
+  dplyr::mutate(VL_BOLSA_TOTAL = sum(c_across(starts_with('VL_BOLSA')), na.rm = TRUE)) |>
+  dplyr::mutate(across(starts_with('VL_BOLSA'), ~ ifelse(is.na(.), 0, .))) |>
+  dplyr::mutate(
+    TIPO_BOLSA_MAIS_COMUM = case_when(
+      VL_BOLSA_CAPES > VL_BOLSA_FAPESQ & VL_BOLSA_CAPES > VL_BOLSA_CNPQ &
+        VL_BOLSA_CAPES > VL_BOLSA_OUTROS ~ "CAPES",
+      VL_BOLSA_FAPESQ > VL_BOLSA_CAPES &
+        VL_BOLSA_FAPESQ > VL_BOLSA_CNPQ &
+        VL_BOLSA_FAPESQ > VL_BOLSA_OUTROS ~ "FAPESQ",
+      VL_BOLSA_OUTROS > VL_BOLSA_CAPES &
+        VL_BOLSA_OUTROS > VL_BOLSA_CNPQ &
+        VL_BOLSA_OUTROS > VL_BOLSA_FAPESQ ~ "OUTROS",
+      VL_BOLSA_CNPQ > VL_BOLSA_CAPES &
+        VL_BOLSA_CNPQ > VL_BOLSA_FAPESQ &
+        VL_BOLSA_CNPQ > VL_BOLSA_OUTROS ~ "CNPQ",
+      TRUE ~ "MÚLTIPLAS BOLSAS"
+    )
+  ) |>
+  dplyr::mutate(TIPO_BOLSA_MAIS_COMUM = ifelse(VL_BOLSA_TOTAL == 0, "SEM BOLSA", TIPO_BOLSA_MAIS_COMUM)) |>
+  dplyr::filter(TIPO_BOLSA_MAIS_COMUM != "MÚLTIPLAS BOLSAS") |>
+  dplyr::filter(VL_BOLSA_TOTAL < 150000) |>
+  dplyr::select(-TIPO_BOLSA)
+
+
+base_capes_cnpq |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
