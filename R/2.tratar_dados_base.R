@@ -285,9 +285,10 @@ base_capes_cnpq <- base_capes |>
     )
   ) |>
   dplyr::relocate(VL_BOLSA_CNPQ, .after = VL_BOLSA_FAPESQ) |>
-  dplyr::rowwise() |>
   dplyr::mutate(VL_BOLSA_TOTAL = 0) |>
+  dplyr::rowwise() |>
   dplyr::mutate(VL_BOLSA_TOTAL = sum(c_across(starts_with('VL_BOLSA')), na.rm = TRUE)) |>
+  dplyr::ungroup() |> 
   dplyr::mutate(across(starts_with('VL_BOLSA'), ~ ifelse(is.na(.), 0, .))) |>
   dplyr::mutate(
     TIPO_BOLSA_MAIS_COMUM = case_when(
