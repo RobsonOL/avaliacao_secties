@@ -2,7 +2,7 @@
 rm(list = ls())
 
 #install.packages("pacman")
-pacman::p_load(tidyverse, janitor, readr, tidyr, genderBR)
+pacman::p_load(tidyverse, janitor, readr, tidyr, genderBR, geobr)
 
 # DADOS ----
 
@@ -311,5 +311,18 @@ base_capes_cnpq <- base_capes |>
   dplyr::filter(VL_BOLSA_TOTAL < 150000) |>
   dplyr::select(-TIPO_BOLSA)
 
+df_pb <- geobr::read_municipality(code_muni = "PB", year = 2010) |> dplyr::select(code_muni, name_muni) |> 
+  dplyr::mutate(name_muni = stringr::str_to_upper(
+    janitor::make_clean_names(name_muni, case = "sentence", allow_dupes = TRUE))) |> 
+  dplyr::rename(NM_MUNICIPIO_PROGRAMA_IES = name_muni, 
+                CD_MUNICIPIO_PROGRAMA_IES = code_muni)
 
-base_capes_cnpq |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
+
+df <- base_capes_cnpq |> 
+  dplyr::mutate(NM_MUNICIPIO_PROGRAMA_IES = stringr::str_to_upper(
+    janitor::make_clean_names(NM_MUNICIPIO_PROGRAMA_IES, case = "sentence", allow_dupes = TRUE))) |> 
+  dplyr::left_join(df_pb, by = "NM_MUNICIPIO_PROGRAMA_IES")
+
+
+
+df |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
