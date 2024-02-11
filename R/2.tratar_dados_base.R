@@ -331,7 +331,6 @@ df_avaliacao <- discentes_pb |> dplyr::distinct(CD_PROGRAMA_IES, CD_CONCEITO_PRO
   distinct(CD_PROGRAMA_IES, .keep_all = TRUE) 
 
 df <- df |> 
-  select(CD_PROGRAMA_IES, NM_PROGRAMA_IES) |> 
   dplyr::left_join(df_avaliacao, by = "CD_PROGRAMA_IES")
 
 
