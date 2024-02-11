@@ -324,5 +324,16 @@ df <- base_capes_cnpq |>
   dplyr::left_join(df_pb, by = "NM_MUNICIPIO_PROGRAMA_IES")
 
 
+df_avaliacao <- discentes_pb |> dplyr::distinct(CD_PROGRAMA_IES, CD_CONCEITO_PROGRAMA) |> 
+  dplyr::mutate(CD_CONCEITO_PROGRAMA = ifelse(
+    CD_CONCEITO_PROGRAMA == "A", NA, CD_CONCEITO_PROGRAMA
+  )) |> 
+  distinct(CD_PROGRAMA_IES, .keep_all = TRUE) 
+
+df <- df |> 
+  select(CD_PROGRAMA_IES, NM_PROGRAMA_IES) |> 
+  dplyr::left_join(df_avaliacao, by = "CD_PROGRAMA_IES")
+
+
 
 df |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
