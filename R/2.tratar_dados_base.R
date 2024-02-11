@@ -331,8 +331,9 @@ df_avaliacao <- discentes_pb |> dplyr::distinct(CD_PROGRAMA_IES, CD_CONCEITO_PRO
   distinct(CD_PROGRAMA_IES, .keep_all = TRUE) 
 
 df <- df |> 
-  dplyr::left_join(df_avaliacao, by = "CD_PROGRAMA_IES")
+  dplyr::left_join(df_avaliacao, by = "CD_PROGRAMA_IES") |> 
+  dplyr::select(-geom)
 
-
+df <- df |> sf::st_drop_geometry() |> as.data.frame()
 
 df |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
