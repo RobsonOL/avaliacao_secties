@@ -245,8 +245,10 @@ editais_fapesq |> readr::write_rds("dados/tidy/editais_fapesq.rds")
 
 
 
+## Joining with the main dataset ----
 
+df <- read_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
 
 
 editais_fapesq |> 
-  left_join(df, by = c("NM_DISCENTE", "SG_ENTIDADE_ENSINO", "DS_GRAU_ACADEMICO_DISCENTE")) 
+  left_join(df, by = c("NM_DISCENTE", "SG_ENTIDADE_ENSINO", "DS_GRAU_ACADEMICO_DISCENTE")) |> View()
