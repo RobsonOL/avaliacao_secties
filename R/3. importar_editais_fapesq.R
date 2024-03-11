@@ -14,7 +14,7 @@ df1 <-
   readxl::read_excel(fapesq_path, sheet = fapesq_sheets[[1L]]) |>
   dplyr::rename(
     NM_DISCENTE = "NOME DO PESQUISADOR",
-    DS_NIVEL = "MODALIDADE",
+    DS_GRAU_ACADEMICO_DISCENTE = "MODALIDADE",
     SG_ENTIDADE_ENSINO = "INSTITUIÇÃO",
     NM_PROJETO = "Título do Projeto",
     INICIO_BOLSA = "INICIO DA VIGÊNCIA",
@@ -40,7 +40,7 @@ df2 <-
   readxl::read_excel(fapesq_path, sheet = fapesq_sheets[[2L]]) |>
   dplyr::rename(
     NM_DISCENTE = "NOME DO PESQUISADOR",
-    DS_NIVEL = "MODALIDADE",
+    DS_GRAU_ACADEMICO_DISCENTE = "MODALIDADE",
     SG_ENTIDADE_ENSINO = "INSTITUIÇÃO",
     NM_PROJETO = "Título do Projeto",
     INICIO_BOLSA = "INICIO DA VIGÊNCIA",
@@ -68,7 +68,7 @@ df3 <-
   dplyr::rename(
     NM_DISCENTE = Bolsista,
     NM_SITUACAO_DISCENTE = Situacao,
-    DS_NIVEL = "Modalidade/Nível",
+    DS_GRAU_ACADEMICO_DISCENTE = "Modalidade/Nível",
     NR_DOCUMENTO_DISCENTE = "CPF Bolsista",
     SG_ENTIDADE_ENSINO = "Instituição",
     NM_PROJETO = "Projeto",
@@ -90,7 +90,7 @@ dplyr::mutate(EDITAL = "Edital 07/2021",
     c(NM_DISCENTE, SG_ENTIDADE_ENSINO, NM_PROJETO, COORDENADOR),
     ~ janitor::make_clean_names(.x, case = "sentence", allow_dupes = TRUE, ascii = TRUE) |> toupper()
   )) |> 
-  dplyr::mutate(DS_NIVEL = case_match(DS_NIVEL,
+  dplyr::mutate(DS_GRAU_ACADEMICO_DISCENTE = case_match(DS_GRAU_ACADEMICO_DISCENTE,
                                       "BLD-DRP-Doutorado no país" ~ "DOUTORADO",
                                       "BLD-MSP-Mestrado no País" ~ "MESTRADO",
                                       "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO"))
@@ -102,7 +102,7 @@ df4 <-
   dplyr::rename(
     NM_DISCENTE = Bolsista,
     NM_SITUACAO_DISCENTE = Situacao,
-    DS_NIVEL = "Modalidade/Nível",
+    DS_GRAU_ACADEMICO_DISCENTE = "Modalidade/Nível",
     NR_DOCUMENTO_DISCENTE = "CPF Bolsista",
     SG_ENTIDADE_ENSINO = "Instituição",
     INICIO_BOLSA = "Início Bolsa",
@@ -124,7 +124,7 @@ df4 <-
     c(NM_DISCENTE, SG_ENTIDADE_ENSINO, COORDENADOR),
     ~ janitor::make_clean_names(.x, case = "sentence", allow_dupes = TRUE, ascii = TRUE) |> toupper()
   )) |> 
-  dplyr::mutate(DS_NIVEL = case_match(DS_NIVEL,
+  dplyr::mutate(DS_GRAU_ACADEMICO_DISCENTE = case_match(DS_GRAU_ACADEMICO_DISCENTE,
                                       "BLD-DRP-Doutorado no país" ~ "DOUTORADO",
                                       "BLD-MSP-Mestrado no País" ~ "MESTRADO",
                                       "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO"))
@@ -136,7 +136,7 @@ df5 <-
   dplyr::rename(
     NM_DISCENTE = Bolsista,
     NM_SITUACAO_DISCENTE = Situacao,
-    DS_NIVEL = "Modalidade/Nível",
+    DS_GRAU_ACADEMICO_DISCENTE = "Modalidade/Nível",
     NR_DOCUMENTO_DISCENTE = "CPF Bolsista",
     SG_ENTIDADE_ENSINO = "Instituição",
     INICIO_BOLSA = "Início Bolsa",
@@ -158,7 +158,7 @@ df5 <-
     c(NM_DISCENTE, SG_ENTIDADE_ENSINO, COORDENADOR, NM_PROJETO),
     ~ janitor::make_clean_names(.x, case = "sentence", allow_dupes = TRUE, ascii = TRUE) |> toupper()
   )) |> 
-  dplyr::mutate(DS_NIVEL = case_match(DS_NIVEL,
+  dplyr::mutate(DS_GRAU_ACADEMICO_DISCENTE = case_match(DS_GRAU_ACADEMICO_DISCENTE,
                                       "BLD-DRP-Doutorado no país" ~ "DOUTORADO",
                                       "BLD-MSP-Mestrado no País" ~ "MESTRADO",
                                       "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO"))
@@ -170,7 +170,7 @@ df6 <-
   dplyr::rename(
     NM_DISCENTE = Bolsista,
     NM_SITUACAO_DISCENTE = Situacao,
-    DS_NIVEL = "Modalidade/Nível",
+    DS_GRAU_ACADEMICO_DISCENTE = "Modalidade/Nível",
     NR_DOCUMENTO_DISCENTE = "CPF Bolsista",
     SG_ENTIDADE_ENSINO = "Instituição",
     INICIO_BOLSA = "Início Bolsa",
@@ -192,7 +192,7 @@ df6 <-
     c(NM_DISCENTE, SG_ENTIDADE_ENSINO, COORDENADOR, NM_PROJETO),
     ~ janitor::make_clean_names(.x, case = "sentence", allow_dupes = TRUE, ascii = TRUE) |> toupper()
   )) |> 
-  dplyr::mutate(DS_NIVEL = case_match(DS_NIVEL,
+  dplyr::mutate(DS_GRAU_ACADEMICO_DISCENTE = case_match(DS_GRAU_ACADEMICO_DISCENTE,
                                       "BLD-DRP-Doutorado no país" ~ "DOUTORADO",
                                       "BLD-MSP-Mestrado no País" ~ "MESTRADO",
                                       "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO"))
@@ -205,7 +205,7 @@ df7 <-
   dplyr::rename(
     NM_DISCENTE = Bolsista,
     NM_SITUACAO_DISCENTE = Situacao,
-    DS_NIVEL = "Modalidade/Nível",
+    DS_GRAU_ACADEMICO_DISCENTE = "Modalidade/Nível",
     NR_DOCUMENTO_DISCENTE = "CPF Bolsista",
     SG_ENTIDADE_ENSINO = "Instituição",
     INICIO_BOLSA = "Início Bolsa",
@@ -227,7 +227,7 @@ df7 <-
     c(NM_DISCENTE, SG_ENTIDADE_ENSINO, COORDENADOR, NM_PROJETO),
     ~ janitor::make_clean_names(.x, case = "sentence", allow_dupes = TRUE, ascii = TRUE) |> toupper()
   )) |> 
-  dplyr::mutate(DS_NIVEL = case_match(DS_NIVEL,
+  dplyr::mutate(DS_GRAU_ACADEMICO_DISCENTE = case_match(DS_GRAU_ACADEMICO_DISCENTE,
                                       "BLD-DRP-Doutorado no país" ~ "DOUTORADO",
                                       "BLD-MSP-Mestrado no País" ~ "MESTRADO",
                                       "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO"))
@@ -239,3 +239,14 @@ editais_fapesq <- bind_rows(df1, df2, df3, df4, df5, df6, df7)
 
 
 editais_fapesq |> readr::write_rds("dados/tidy/editais_fapesq.rds")
+
+
+
+
+
+
+
+
+
+editais_fapesq |> 
+  left_join(df, by = c("NM_DISCENTE", "SG_ENTIDADE_ENSINO", "DS_GRAU_ACADEMICO_DISCENTE")) 
