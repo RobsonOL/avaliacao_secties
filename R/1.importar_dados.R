@@ -439,5 +439,3 @@ artigos_autor_pb <- producao_artigos_periodicos |>
 
 artigos_autor_pb |> write_rds("dados/tidy/artigos_autor_pb.rds")
 
-
-
