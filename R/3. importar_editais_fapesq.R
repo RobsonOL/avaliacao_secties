@@ -63,6 +63,7 @@ df2 <-
   
                 
 ## Edital 072021 ----
+
 df3 <-
   readxl::read_excel(fapesq_path, sheet = fapesq_sheets[[3L]]) |>
   dplyr::rename(
@@ -254,14 +255,16 @@ df7 <-
 
 
 editais_fapesq <- bind_rows(df1, df2, df3, df4, df5, df6, df7) |> 
-  dplyr::mutate(NR_DOCUMENTO_DISCENTE = str_replace(NR_DOCUMENTO_DISCENTE, ".", "")) |> 
+  dplyr::mutate(NR_DOCUMENTO_DISCENTE = str_replace_all(NR_DOCUMENTO_DISCENTE, "[.]", "")) |> 
+  dplyr::mutate(NR_DOCUMENTO_DISCENTE = str_replace_all(NR_DOCUMENTO_DISCENTE, "-", "")) |> 
   dplyr::mutate(NR_DOCUMENTO_DISCENTE = ifelse(is.na(NR_DOCUMENTO_DISCENTE), NA, 
                                                paste0("***.", 
                                                       substr(NR_DOCUMENTO_DISCENTE, 4, 6),
                                                       "." ,
                                                       substr(NR_DOCUMENTO_DISCENTE, 7, 9),
                                                       "-**"))) |> 
-  dplyr::mutate(NM_DISCENTE_PRIMEIRO = str_extract(NM_DISCENTE, "^[^ ]+")) |> 
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO_NM = str_extract(NM_DISCENTE, "^[^ ]+")) |> 
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = str_extract(NM_DISCENTE, "^[^ ]+ [^ ]+")) |> 
   dplyr::mutate(SG_ENTIDADE_ENSINO = case_match(SG_ENTIDADE_ENSINO,
                                                 "UFPB CAMPUS III" ~ "UFPB",
                                                 "UFCG CSTR" ~ "UFCG",
@@ -273,7 +276,7 @@ editais_fapesq <- bind_rows(df1, df2, df3, df4, df5, df6, df7) |>
 
 
 
-skimr::skim(editais_fapesq)
+# skimr::skim(editais_fapesq)
 
 
 
@@ -282,11 +285,18 @@ editais_fapesq |> readr::write_csv("dados/tidy/editais_fapesq.csv")
 
 
 ## Joining with the main dataset ---- 
+# editais_fapesq <- readr::read_rds("dados/tidy/editais_fapesq.rds")
 
 df <- read_rds("dados/tidy/discentes_bolsa_tese_pub.rds") |> 
-  dplyr::mutate(NM_DISCENTE_PRIMEIRO = str_extract(NM_DISCENTE, "^[^ ]+")) 
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO_NM = str_extract(NM_DISCENTE, "^[^ ]+")) |> 
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = str_extract(NM_DISCENTE, "^[^ ]+ [^ ]+")) 
 
+# 
+# df |> 
+#   left_join(editais_fapesq |> filter(!is.na(NR_DOCUMENTO_DISCENTE)) |> filter(DS_GRAU_ACADEMICO_DISCENTE %in% c("MESTRADO", "DOUTORADO")), 
+#             by = c("NM_DISCENTE_PRIMEIRO_SEGUNDO_NM", "SG_ENTIDADE_ENSINO", "DS_GRAU_ACADEMICO_DISCENTE")) |> 
+#   dplyr::select(ID_PESSOA, NM_DISCENTE.x, NM_DISCENTE.y, DS_GRAU_ACADEMICO_DISCENTE, 
+#                 NM_PROGRAMA_IES.x, NM_PROGRAMA_IES.y, TIPO_BOLSA_MAIS_COMUM.x, 
+#                 TIPO_BOLSA_MAIS_COMUM.y) |> 
+#   filter(TIPO_BOLSA_MAIS_COMUM.y == "FAPESQ - EDITAL") |> View()
 
-df |> 
-  left_join(editais_fapesq, by = c("NM_DISCENTE", "SG_ENTIDADE_ENSINO", "DS_GRAU_ACADEMICO_DISCENTE")) |> 
-  filter(NM_DISCENTE %in% c(editais_fapesq$NM_DISCENTE))
