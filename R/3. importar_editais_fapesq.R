@@ -93,7 +93,10 @@ dplyr::mutate(EDITAL = "Edital 07/2021",
   dplyr::mutate(DS_GRAU_ACADEMICO_DISCENTE = case_match(DS_GRAU_ACADEMICO_DISCENTE,
                                       "BLD-DRP-Doutorado no país" ~ "DOUTORADO",
                                       "BLD-MSP-Mestrado no País" ~ "MESTRADO",
-                                      "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO"))
+                                      "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO")) |> 
+  dplyr::mutate(
+    TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
+  )
 
 
 ## Edital 16/2022 ----
@@ -127,7 +130,11 @@ df4 <-
   dplyr::mutate(DS_GRAU_ACADEMICO_DISCENTE = case_match(DS_GRAU_ACADEMICO_DISCENTE,
                                       "BLD-DRP-Doutorado no país" ~ "DOUTORADO",
                                       "BLD-MSP-Mestrado no País" ~ "MESTRADO",
-                                      "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO"))
+                                      "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO")) |> 
+  select(-`...15`) |> 
+  dplyr::mutate(
+    TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
+  )
 
 
 ## Edital 17/2022 ----
@@ -161,7 +168,10 @@ df5 <-
   dplyr::mutate(DS_GRAU_ACADEMICO_DISCENTE = case_match(DS_GRAU_ACADEMICO_DISCENTE,
                                       "BLD-DRP-Doutorado no país" ~ "DOUTORADO",
                                       "BLD-MSP-Mestrado no País" ~ "MESTRADO",
-                                      "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO"))
+                                      "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO")) |> 
+  dplyr::mutate(
+    TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
+  )
 
 
 ## Edital 08/2023 ----
@@ -177,6 +187,7 @@ df6 <-
     NM_PROJETO = "Projeto",
     FIM_BOLSA = "Término Bolsa",
     VL_BOLSA_MES = "Valor da Bolsa",
+    QT_MESES_BOLSA = "Bolsas Concedidas",
     DT_NASCIMENTO_DISCENTE = "Data Nasc. Bolsista",
     EDITAL = Edital,
     VINCULO_INSTITUCIONAL = "Tem Vínculo Institucional",
@@ -195,7 +206,10 @@ df6 <-
   dplyr::mutate(DS_GRAU_ACADEMICO_DISCENTE = case_match(DS_GRAU_ACADEMICO_DISCENTE,
                                       "BLD-DRP-Doutorado no país" ~ "DOUTORADO",
                                       "BLD-MSP-Mestrado no País" ~ "MESTRADO",
-                                      "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO"))
+                                      "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO")) |> 
+  dplyr::mutate(
+    TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
+  )
 
 
 
@@ -212,6 +226,7 @@ df7 <-
     NM_PROJETO = "Projeto",
     FIM_BOLSA = "Término Bolsa",
     VL_BOLSA_MES = "Valor da Bolsa",
+    QT_MESES_BOLSA = "Bolsas Concedidas",
     DT_NASCIMENTO_DISCENTE = "Data Nasc. Bolsista",
     EDITAL = Edital,
     VINCULO_INSTITUCIONAL = "Tem Vínculo Institucional",
@@ -230,25 +245,48 @@ df7 <-
   dplyr::mutate(DS_GRAU_ACADEMICO_DISCENTE = case_match(DS_GRAU_ACADEMICO_DISCENTE,
                                       "BLD-DRP-Doutorado no país" ~ "DOUTORADO",
                                       "BLD-MSP-Mestrado no País" ~ "MESTRADO",
-                                      "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO"))
+                                      "BLD-PDRP-Pós-Doutorado no País" ~ "PÓS-DOUTORADO")) |> 
+  dplyr::mutate(
+    TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
+  )
 
 
 
 
-editais_fapesq <- bind_rows(df1, df2, df3, df4, df5, df6, df7)
+editais_fapesq <- bind_rows(df1, df2, df3, df4, df5, df6, df7) |> 
+  dplyr::mutate(NR_DOCUMENTO_DISCENTE = str_replace(NR_DOCUMENTO_DISCENTE, ".", "")) |> 
+  dplyr::mutate(NR_DOCUMENTO_DISCENTE = ifelse(is.na(NR_DOCUMENTO_DISCENTE), NA, 
+                                               paste0("***.", 
+                                                      substr(NR_DOCUMENTO_DISCENTE, 4, 6),
+                                                      "." ,
+                                                      substr(NR_DOCUMENTO_DISCENTE, 7, 9),
+                                                      "-**"))) |> 
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO = str_extract(NM_DISCENTE, "^[^ ]+")) |> 
+  dplyr::mutate(SG_ENTIDADE_ENSINO = case_match(SG_ENTIDADE_ENSINO,
+                                                "UFPB CAMPUS III" ~ "UFPB",
+                                                "UFCG CSTR" ~ "UFCG",
+                                                "UFCG CUITE" ~ "UFCG",
+                                                "UFPB CCA" ~ "UFPB",
+                                                "CCA" ~ "UFPB",
+                                                .default = as.character(SG_ENTIDADE_ENSINO)))
+                                                
+
+
+
+skimr::skim(editais_fapesq)
+
 
 
 editais_fapesq |> readr::write_rds("dados/tidy/editais_fapesq.rds")
+editais_fapesq |> readr::write_csv("dados/tidy/editais_fapesq.csv")
 
 
+## Joining with the main dataset ---- 
+
+df <- read_rds("dados/tidy/discentes_bolsa_tese_pub.rds") |> 
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO = str_extract(NM_DISCENTE, "^[^ ]+")) 
 
 
-
-
-## Joining with the main dataset ----
-
-df <- read_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
-
-
-editais_fapesq |> 
-  left_join(df, by = c("NM_DISCENTE", "SG_ENTIDADE_ENSINO", "DS_GRAU_ACADEMICO_DISCENTE")) |> View()
+df |> 
+  left_join(editais_fapesq, by = c("NM_DISCENTE", "SG_ENTIDADE_ENSINO", "DS_GRAU_ACADEMICO_DISCENTE")) |> 
+  filter(NM_DISCENTE %in% c(editais_fapesq$NM_DISCENTE))
