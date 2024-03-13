@@ -504,7 +504,7 @@ df3 <-
     NM_PROJETO = "Projeto",
     INICIO_BOLSA = "Início Bolsa",
     FIM_BOLSA = "Término Bolsa",
-    QT_MESES_BOLSA = "Bolsas Concedidas",
+    QT_BOLSA_FAPESQ = "Bolsas Concedidas",
     DT_NASCIMENTO_DISCENTE = "Data Nasc. Bolsista",
     EDITAL = Edital,
     VINCULO_INSTITUCIONAL = "Tem Vínculo Institucional",
@@ -540,7 +540,7 @@ df4 <-
     SG_ENTIDADE_ENSINO = "Instituição",
     INICIO_BOLSA = "Início Bolsa",
     FIM_BOLSA = "Término Bolsa",
-    QT_MESES_BOLSA = "Bolsas Concedidas",
+    QT_BOLSA_FAPESQ = "Bolsas Concedidas",
     VL_BOLSA_MES = "Valor da Bolsa",
     DT_NASCIMENTO_DISCENTE = "Data Nasc. Bolsista",
     EDITAL = Edital,
@@ -617,7 +617,7 @@ df6 <-
     NM_PROJETO = "Projeto",
     FIM_BOLSA = "Término Bolsa",
     VL_BOLSA_MES = "Valor da Bolsa",
-    QT_MESES_BOLSA = "Bolsas Concedidas",
+    QT_BOLSA_FAPESQ = "Bolsas Concedidas",
     DT_NASCIMENTO_DISCENTE = "Data Nasc. Bolsista",
     EDITAL = Edital,
     VINCULO_INSTITUCIONAL = "Tem Vínculo Institucional",
@@ -656,7 +656,7 @@ df7 <-
     NM_PROJETO = "Projeto",
     FIM_BOLSA = "Término Bolsa",
     VL_BOLSA_MES = "Valor da Bolsa",
-    QT_MESES_BOLSA = "Bolsas Concedidas",
+    QT_BOLSA_FAPESQ = "Bolsas Concedidas",
     DT_NASCIMENTO_DISCENTE = "Data Nasc. Bolsista",
     EDITAL = Edital,
     VINCULO_INSTITUCIONAL = "Tem Vínculo Institucional",
@@ -700,8 +700,30 @@ editais_fapesq <- bind_rows(df1, df2, df3, df4, df5, df6, df7) |>
                                                 "UFCG CUITE" ~ "UFCG",
                                                 "UFPB CCA" ~ "UFPB",
                                                 "CCA" ~ "UFPB",
-                                                .default = as.character(SG_ENTIDADE_ENSINO)))
-
+                                                .default = as.character(SG_ENTIDADE_ENSINO))) |> 
+  dplyr::mutate(
+    QT_BOLSA_FAPESQ = ifelse(is.na(QT_BOLSA_FAPESQ),
+                             lubridate::interval(ymd(INICIO_BOLSA), ymd(FIM_BOLSA)) %/% months(1),
+                             QT_BOLSA_FAPESQ)
+  ) |> 
+  dplyr::mutate(
+    VL_BOLSA_MES = case_when(
+      EDITAL == "Edital 07/2021" & DS_GRAU_ACADEMICO_DISCENTE == "MESTRADO" ~ 1500,
+      EDITAL == "Edital 07/2021" & DS_GRAU_ACADEMICO_DISCENTE == "DOUTORADO" ~ 2200,
+      EDITAL == "Edital 07/2021" & DS_GRAU_ACADEMICO_DISCENTE == "POS-DOUTORADO" ~ 4100,
+      EDITAL == "Edital 03/2016" & DS_GRAU_ACADEMICO_DISCENTE == "MESTRADO" ~ 400,
+      EDITAL == "Edital 03/2016" & DS_GRAU_ACADEMICO_DISCENTE == "DOUTORADO" ~ 500,
+      EDITAL == "Edital 03/2016" & DS_GRAU_ACADEMICO_DISCENTE == "POS-DOUTORADO" ~ 4100,
+      EDITAL == "Edital 07/2018" & DS_GRAU_ACADEMICO_DISCENTE == "MESTRADO" ~ 400,
+      EDITAL == "Edital 07/2018" & DS_GRAU_ACADEMICO_DISCENTE == "DOUTORADO" ~ 500,
+      EDITAL == "Edital 07/2018" & DS_GRAU_ACADEMICO_DISCENTE == "POS-DOUTORADO" ~ 4100,
+      TRUE ~ VL_BOLSA_MES
+    )
+  )
+  
+##### Valor das bolsas fapesq 
+# https://fapesq.rpp.br/editais/editais-encerrados/edital-07-2021-bolsas-fapesq-retificado-06-07-2021.pdf/view
+# 
 
 editais_fapesq |> readr::write_rds("dados/tidy/editais_fapesq.rds")
 editais_fapesq |> readr::write_csv("dados/tidy/editais_fapesq.csv")

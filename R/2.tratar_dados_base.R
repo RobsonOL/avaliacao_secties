@@ -11,7 +11,7 @@ teses_pb <- readr::read_rds("dados/tidy/teses_dissertacoes_pb.rds")
 bolsas_pb <- readr::read_rds("dados/tidy/bolsas_pb.rds") 
 artigos_autor_pb <- readr::read_rds("dados/tidy/artigos_autor_pb.rds")
 cnpq_pb <- readr::read_rds("dados/tidy/bolsas_cnpq_pb.rds")
-editais_fapesq |> readr::read_rds("dados/tidy/editais_fapesq.rds")
+editais_fapesq <- readr::read_rds("dados/tidy/editais_fapesq.rds")
 
 ## Dimensão Discente ----
 
@@ -103,7 +103,8 @@ df_bolsas <- bolsas_pb |>
                      c("ORIGEM", "TAXA", "MULTICAMPI", "STATUS")
                    ))) |>
   dplyr::filter(ANO >= 2017,
-                DS_NIVEL %in% c("DOUTORADO", "MESTRADO")) |>
+                DS_NIVEL %in% c("DOUTORADO", "MESTRADO", "ESTÁGIO PÓS-DOUTORAL")) |>
+  dplyr::mutate(DS_NIVEL = ifelse(DS_NIVEL == "ESTÁGIO PÓS-DOUTORAL", "POS-DOUTORADO", DS_NIVEL)) |> 
   dplyr::mutate(
     SG_IES_ESTUDO = dplyr::case_match(
       SG_IES_ESTUDO,
@@ -115,10 +116,11 @@ df_bolsas <- bolsas_pb |>
   ) |>
   dplyr::rename(SG_ENTIDADE_ENSINO = SG_IES_ESTUDO) |>
   dplyr::mutate(
-    SG_PROGRAMA_CAPES = case_when(
-      SG_PROGRAMA_CAPES == "DS" ~ "CAPES",
-      SG_PROGRAMA_CAPES == "FAPESQ" ~ "FAPESQ",
-      !SG_PROGRAMA_CAPES %in% c("DS", "FAPESQ") ~ "OUTROS"
+    SG_PROGRAMA_CAPES = case_match(
+      SG_PROGRAMA_CAPES,
+      "DS" ~ "CAPES",
+      "FAPESQ" ~ "CAPES_FAPESQ",
+      .default = "OUTROS"
     )
   ) |>
   dplyr::group_by(ID_PESSOA, ANO, DS_NIVEL, CD_PROGRAMA_PPG, SG_ENTIDADE_ENSINO, SG_PROGRAMA_CAPES) |>
@@ -136,13 +138,13 @@ df_bolsas <- bolsas_pb |>
   dplyr::mutate(
     QT_BOLSA_TOTAL = sum(
       QT_BOLSA_ANO_CAPES,
-      QT_BOLSA_ANO_FAPESQ,
+      QT_BOLSA_ANO_CAPES_FAPESQ,
       QT_BOLSA_ANO_OUTROS,
       na.rm = TRUE
     ),
     VL_BOLSA_TOTAL = sum(
       VL_BOLSA_ANO_CAPES,
-      VL_BOLSA_ANO_FAPESQ,
+      VL_BOLSA_ANO_CAPES_FAPESQ,
       VL_BOLSA_ANO_OUTROS,
       na.rm = TRUE
     )
@@ -153,13 +155,13 @@ df_bolsas <- bolsas_pb |>
   dplyr::rename_with(~ stringr::str_remove(., "ANO_")) |> 
   dplyr::mutate(
     BOLSA_APENAS_FAPESQ = case_when(
-      QT_BOLSA_CAPES == 0 & QT_BOLSA_FAPESQ > 0 & QT_BOLSA_OUTROS == 0 ~ 1,
+      QT_BOLSA_CAPES == 0 & QT_BOLSA_CAPES_FAPESQ > 0 & QT_BOLSA_OUTROS == 0 ~ 1,
       TRUE ~ 0
     ),
     TIPO_BOLSA_MAIS_COMUM = case_when(
-      QT_BOLSA_CAPES > QT_BOLSA_FAPESQ & QT_BOLSA_CAPES > QT_BOLSA_OUTROS ~ "CAPES",
-      QT_BOLSA_FAPESQ > QT_BOLSA_CAPES & QT_BOLSA_FAPESQ > QT_BOLSA_OUTROS ~ "FAPESQ",
-      QT_BOLSA_OUTROS > QT_BOLSA_CAPES & QT_BOLSA_OUTROS > QT_BOLSA_FAPESQ ~ "OUTROS",
+      QT_BOLSA_CAPES > QT_BOLSA_CAPES_FAPESQ & QT_BOLSA_CAPES > QT_BOLSA_OUTROS ~ "CAPES",
+      QT_BOLSA_CAPES_FAPESQ > QT_BOLSA_CAPES & QT_BOLSA_CAPES_FAPESQ > QT_BOLSA_OUTROS ~ "CAPES-FAPESQ",
+      QT_BOLSA_OUTROS > QT_BOLSA_CAPES & QT_BOLSA_OUTROS > QT_BOLSA_CAPES_FAPESQ ~ "OUTROS",
       TRUE ~ "MÚLTIPLAS BOLSAS")
     ) |> 
   dplyr::rename(DS_GRAU_ACADEMICO_DISCENTE = DS_NIVEL,
@@ -167,17 +169,10 @@ df_bolsas <- bolsas_pb |>
 
 
 df_discentes_bolsa <- df_discentes |>
-  dplyr::mutate(
-    DS_GRAU_ACADEMICO_DISCENTE = case_match(
-      DS_GRAU_ACADEMICO_DISCENTE,
-      "DOUTORADO" ~ "DOUTORADO",
-      "MESTRADO" ~ "MESTRADO",
-      "MESTRADO PROFISSIONAL" ~ "MESTRADO")
-    ) |> 
   dplyr::left_join(
     df_bolsas, 
-    by = c("ID_PESSOA", "NM_DISCENTE",
-           "CD_PROGRAMA_IES", "DS_GRAU_ACADEMICO_DISCENTE", "SG_ENTIDADE_ENSINO")
+    by = c("ID_PESSOA", "NM_DISCENTE", "CD_PROGRAMA_IES", 
+           "DS_GRAU_ACADEMICO_DISCENTE", "SG_ENTIDADE_ENSINO")
     ) 
 
 ## Tese e Dissertação ----
@@ -199,7 +194,7 @@ df_discentes_bolsa_tese <- df_discentes_bolsa |>
   dplyr::mutate(
     TEM_TESE = ifelse(!is.na(NM_PRODUCAO), 1, 0)
     ) |> 
-  dplyr::mutate(NM_PRODUCAO = if_else(NM_PRODUCAO == "NA", NA, NM_PRODUCAO))
+  dplyr::mutate(NM_PRODUCAO = if_else(NM_PRODUCAO == "NA", NA, NM_PRODUCAO)) 
 
 # Casos estranhos:
 # df_discentes_bolsa_tese |> group_by(ID_PESSOA, CD_PROGRAMA_IES, DS_GRAU_ACADEMICO_DISCENTE) |> 
@@ -264,7 +259,7 @@ base_capes <- df_discentes_bolsa_tese |>
   dplyr::mutate(NM_DISSERTACAO_TESE = dplyr::na_if(NM_DISSERTACAO_TESE, "NA"))
     
 
-## Adicionar bolsas CNPQ ----
+## Adicionar bolsas CNPQ & FAPESQ ----
 cnpq_discente <- cnpq_pb |> dplyr::group_by(NM_DISCENTE,
                                          TIPO_BOLSA,
                                          DS_GRAU_ACADEMICO_DISCENTE,
@@ -273,6 +268,16 @@ cnpq_discente <- cnpq_pb |> dplyr::group_by(NM_DISCENTE,
   dplyr::ungroup() |> 
   dplyr::rename(VL_BOLSA_CNPQ = VL_BOLSA_ANO) 
 
+
+fapesq_discente <- editais_fapesq |>
+  dplyr::mutate(TIPO_BOLSA = "FAPESQ") |> 
+  dplyr::group_by(NM_DISCENTE,
+                  TIPO_BOLSA,
+                  DS_GRAU_ACADEMICO_DISCENTE,
+                  SG_ENTIDADE_ENSINO) |>
+  dplyr::summarise(VL_BOLSA_FAPESQ = QT_BOLSA_FAPESQ * VL_BOLSA_MES,
+                   QT_BOLSA_FAPESQ = sum(QT_BOLSA_FAPESQ, na.rm = TRUE)) |> 
+  dplyr::ungroup() 
 
 
 
@@ -285,7 +290,15 @@ base_capes_cnpq <- base_capes |>
       "SG_ENTIDADE_ENSINO"
     )
   ) |>
-  dplyr::relocate(VL_BOLSA_CNPQ, .after = VL_BOLSA_FAPESQ) |>
+  # dplyr::left_join(
+  #   fapesq_discente,
+  #   by = c(
+  #     "NM_DISCENTE",
+  #     "DS_GRAU_ACADEMICO",
+  #     "SG_ENTIDADE_ENSINO"
+  #   )
+  # ) |> 
+  dplyr::relocate(VL_BOLSA_CNPQ, .after = VL_BOLSA_CAPES_FAPESQ) |>
   dplyr::mutate(VL_BOLSA_TOTAL = 0) |>
   dplyr::rowwise() |>
   dplyr::mutate(VL_BOLSA_TOTAL = sum(c_across(starts_with('VL_BOLSA')), na.rm = TRUE)) |>
@@ -293,16 +306,16 @@ base_capes_cnpq <- base_capes |>
   dplyr::mutate(across(starts_with('VL_BOLSA'), ~ ifelse(is.na(.), 0, .))) |>
   dplyr::mutate(
     TIPO_BOLSA_MAIS_COMUM = case_when(
-      VL_BOLSA_CAPES > VL_BOLSA_FAPESQ & VL_BOLSA_CAPES > VL_BOLSA_CNPQ &
+      VL_BOLSA_CAPES > VL_BOLSA_CAPES_FAPESQ & VL_BOLSA_CAPES > VL_BOLSA_CNPQ &
         VL_BOLSA_CAPES > VL_BOLSA_OUTROS ~ "CAPES",
-      VL_BOLSA_FAPESQ > VL_BOLSA_CAPES &
-        VL_BOLSA_FAPESQ > VL_BOLSA_CNPQ &
-        VL_BOLSA_FAPESQ > VL_BOLSA_OUTROS ~ "FAPESQ",
+      VL_BOLSA_CAPES_FAPESQ > VL_BOLSA_CAPES &
+        VL_BOLSA_CAPES_FAPESQ > VL_BOLSA_CNPQ &
+        VL_BOLSA_CAPES_FAPESQ > VL_BOLSA_OUTROS ~ "CAPES - FAPESQ",
       VL_BOLSA_OUTROS > VL_BOLSA_CAPES &
         VL_BOLSA_OUTROS > VL_BOLSA_CNPQ &
-        VL_BOLSA_OUTROS > VL_BOLSA_FAPESQ ~ "OUTROS",
+        VL_BOLSA_OUTROS > VL_BOLSA_CAPES_FAPESQ ~ "OUTROS",
       VL_BOLSA_CNPQ > VL_BOLSA_CAPES &
-        VL_BOLSA_CNPQ > VL_BOLSA_FAPESQ &
+        VL_BOLSA_CNPQ > VL_BOLSA_CAPES_FAPESQ &
         VL_BOLSA_CNPQ > VL_BOLSA_OUTROS ~ "CNPQ",
       TRUE ~ "MÚLTIPLAS BOLSAS"
     )
@@ -312,10 +325,12 @@ base_capes_cnpq <- base_capes |>
   dplyr::filter(VL_BOLSA_TOTAL < 150000) |>
   dplyr::select(-TIPO_BOLSA)
 
-df_pb <- geobr::read_municipality(code_muni = "PB", year = 2010) |> dplyr::select(code_muni, name_muni) |> 
+
+
+df_pb <- geobr::read_municipality(code_muni = "PB", year = 2010) |> dplyr::select(code_muni, name_muni) |>
   dplyr::mutate(name_muni = stringr::str_to_upper(
-    janitor::make_clean_names(name_muni, case = "sentence", allow_dupes = TRUE))) |> 
-  dplyr::rename(NM_MUNICIPIO_PROGRAMA_IES = name_muni, 
+    janitor::make_clean_names(name_muni, case = "sentence", allow_dupes = TRUE))) |>
+  dplyr::rename(NM_MUNICIPIO_PROGRAMA_IES = name_muni,
                 CD_MUNICIPIO_PROGRAMA_IES = code_muni)
 
 
@@ -325,7 +340,8 @@ df <- base_capes_cnpq |>
   dplyr::left_join(df_pb, by = "NM_MUNICIPIO_PROGRAMA_IES")
 
 
-df_avaliacao <- discentes_pb |> dplyr::distinct(CD_PROGRAMA_IES, CD_CONCEITO_PROGRAMA) |> 
+df_avaliacao <- discentes_pb |> 
+  dplyr::distinct(CD_PROGRAMA_IES, CD_CONCEITO_PROGRAMA) |> 
   dplyr::mutate(CD_CONCEITO_PROGRAMA = ifelse(
     CD_CONCEITO_PROGRAMA == "A", NA, CD_CONCEITO_PROGRAMA
   )) |> 
@@ -338,3 +354,11 @@ df <- df |>
 df <- df |> sf::st_drop_geometry() |> as.data.frame()
 
 df |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
+
+
+
+
+
+
+
+editais_fapesq |> group_by(EDITAL) |> summarise(bolsa = mean(VL_BOLSA_MES, na.rm = TRUE)) 
