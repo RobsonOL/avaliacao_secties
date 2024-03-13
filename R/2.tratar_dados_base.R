@@ -10,7 +10,8 @@ discentes_pb <- readr::read_rds("dados/tidy/discentes_pb.rds")
 teses_pb <- readr::read_rds("dados/tidy/teses_dissertacoes_pb.rds")
 bolsas_pb <- readr::read_rds("dados/tidy/bolsas_pb.rds") 
 artigos_autor_pb <- readr::read_rds("dados/tidy/artigos_autor_pb.rds")
-cnpq_pb <- read_rds("dados/tidy/bolsas_cnpq_pb.rds")
+cnpq_pb <- readr::read_rds("dados/tidy/bolsas_cnpq_pb.rds")
+editais_fapesq |> readr::read_rds("dados/tidy/editais_fapesq.rds")
 
 ## Dimensão Discente ----
 
