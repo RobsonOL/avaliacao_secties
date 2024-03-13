@@ -360,9 +360,14 @@ cnpq_2022 <-
   dplyr::select(all_of(colunas_selecionadas)) |> 
   dplyr::mutate(across(colunas_numericas, as.numeric))
 
+modalidades_cnpq <- c("GD - Doutorado", "GM - Mestrado", 
+                      "PDJ - Pós-doutorado Júnior", "GDE - Doutorado no Exterior",
+                      "SWE - Doutorado Sanduíche no Exterior", "PDE - Pós-doutorado no Exterior",
+                      "PDS - Pós-doutorado Sênior", "PDI - Pos-doutorado Empresarial", "SWP - Doutorado-Sanduiche no Pais",
+                      "MPE - Mestrado Profissional no Exterior")
 
 cnpq <- dplyr::bind_rows(cnpq_2017, cnpq_2018, cnpq_2019, cnpq_2020, cnpq_2021, cnpq_2022) |> 
-  dplyr::filter(modalidade %in% c("GD - Doutorado", "GM - Mestrado")) |> 
+  dplyr::filter(modalidade %in% modalidades_cnpq) |> 
   dplyr::filter(sigla_uf_origem == "PB" & sigla_uf_destino == "PB") |> 
   dplyr::select(ano_referencia, beneficiario, modalidade, sigla_instituicao_destino,
                 sigla_uf_destino, area, subarea, grande_area, valor_pago) |> 
@@ -389,8 +394,12 @@ cnpq <- dplyr::bind_rows(cnpq_2017, cnpq_2018, cnpq_2019, cnpq_2020, cnpq_2021, 
     GRANDE_AREA = grande_area
   ) |> 
   dplyr::mutate(DS_NIVEL = case_when(
-    DS_NIVEL == "GD DOUTORADO" ~ "DOUTORADO",
-    DS_NIVEL == "GM MESTRADO" ~ "MESTRADO"
+    DS_NIVEL %in% c("GD DOUTORADO", "GDE DOUTORADO NO EXTERIOR", 
+                    "SWE DOUTORADO SANDUICHE NO EXTERIOR", 
+                    "SWP DOUTORADO SANDUICHE NO PAIS") ~ "DOUTORADO",
+    DS_NIVEL %in% c("GM MESTRADO", "MPE MESTRADO PROFISSIONAL NO EXTERIOR") ~ "MESTRADO",
+    DS_NIVEL %in% c("PDJ POS DOUTORADO JUNIOR", "PDE POS DOUTORADO NO EXTERIOR", 
+                    "PDS POS DOUTORADO SENIOR", "PDI POS DOUTORADO EMPRESARIAL") ~ "POS-DOUTORADO"
   )) |> 
   dplyr::mutate(TIPO_BOLSA = "CNPQ") |> 
   dplyr::select(
