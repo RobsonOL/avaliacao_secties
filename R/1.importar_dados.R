@@ -296,8 +296,10 @@ teses_dissertacoes_pb <- teses_dissertacoes |>
                                          "UFPB/AREIA" ~ "UFPB-AREIA",
                                          .default = SG_ENTIDADE_ENSINO)) |> 
   mutate(NM_GRAU_ACADEMICO = case_match(NM_GRAU_ACADEMICO,
-                                         "Mestrado" ~ "MESTRADO",
-                                         "Doutorado" ~ "DOUTORADO",
+                                        "MESTRADO" ~ "MESTRADO",
+                                        "MESTRADO PROFISSIONAL" ~ "MESTRADO",
+                                        "DOUTORADO" ~ "DOUTORADO",
+                                        "DOUTORADO PROFISSIONAL" ~ "DOUTORADO",
                                          "Profissionalizante" ~ "MESTRADO PROFISSIONAL",
                                          .default = NM_GRAU_ACADEMICO)) |> 
   dplyr::mutate(
