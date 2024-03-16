@@ -26,7 +26,7 @@ get_mode <- function(x) {
 
 dim_discentes <- discentes_pb |> 
   dplyr::filter(
-    dplyr::between(ANO, 2017, 2020)
+    dplyr::between(ANO, 2017, 2023)
     ) |> 
   dplyr::group_by(
     NM_DISCENTE, AN_NASCIMENTO_DISCENTE
@@ -54,7 +54,7 @@ df_discentes <- dim_discentes |>
   dplyr::left_join(
     discentes_pb |> 
       dplyr::filter(
-        dplyr::between(ANO, 2017, 2020) # FAPESQ só começou a ser informado em 2017
+        dplyr::between(ANO, 2017, 2023) 
         ) |> 
       dplyr::select(
         ANO, ID_PESSOA,
@@ -270,14 +270,17 @@ cnpq_discente <- cnpq_pb |> dplyr::group_by(NM_DISCENTE,
 
 
 fapesq_discente <- editais_fapesq |>
-  dplyr::mutate(TIPO_BOLSA = "FAPESQ") |> 
+  dplyr::filter(EDITAL != "Edital 03/2016") |> 
+  dplyr::filter(DS_GRAU_ACADEMICO_DISCENTE %in% c("MESTRADO", "DOUTORADO")) |> 
   dplyr::group_by(NM_DISCENTE,
-                  TIPO_BOLSA,
                   DS_GRAU_ACADEMICO_DISCENTE,
+                  EDITAL,
+                  NR_DOCUMENTO_DISCENTE,
                   SG_ENTIDADE_ENSINO) |>
   dplyr::summarise(VL_BOLSA_FAPESQ = QT_BOLSA_FAPESQ * VL_BOLSA_MES,
                    QT_BOLSA_FAPESQ = sum(QT_BOLSA_FAPESQ, na.rm = TRUE)) |> 
-  dplyr::ungroup() 
+  dplyr::ungroup() |> 
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+"))
 
 
 
@@ -290,14 +293,6 @@ base_capes_cnpq <- base_capes |>
       "SG_ENTIDADE_ENSINO"
     )
   ) |>
-  # dplyr::left_join(
-  #   fapesq_discente,
-  #   by = c(
-  #     "NM_DISCENTE",
-  #     "DS_GRAU_ACADEMICO",
-  #     "SG_ENTIDADE_ENSINO"
-  #   )
-  # ) |> 
   dplyr::relocate(VL_BOLSA_CNPQ, .after = VL_BOLSA_CAPES_FAPESQ) |>
   dplyr::mutate(VL_BOLSA_TOTAL = 0) |>
   dplyr::rowwise() |>
@@ -333,13 +328,6 @@ df_pb <- geobr::read_municipality(code_muni = "PB", year = 2010) |> dplyr::selec
   dplyr::rename(NM_MUNICIPIO_PROGRAMA_IES = name_muni,
                 CD_MUNICIPIO_PROGRAMA_IES = code_muni)
 
-
-df <- base_capes_cnpq |> 
-  dplyr::mutate(NM_MUNICIPIO_PROGRAMA_IES = stringr::str_to_upper(
-    janitor::make_clean_names(NM_MUNICIPIO_PROGRAMA_IES, case = "sentence", allow_dupes = TRUE))) |> 
-  dplyr::left_join(df_pb, by = "NM_MUNICIPIO_PROGRAMA_IES")
-
-
 df_avaliacao <- discentes_pb |> 
   dplyr::distinct(CD_PROGRAMA_IES, CD_CONCEITO_PROGRAMA) |> 
   dplyr::mutate(CD_CONCEITO_PROGRAMA = ifelse(
@@ -347,18 +335,24 @@ df_avaliacao <- discentes_pb |>
   )) |> 
   distinct(CD_PROGRAMA_IES, .keep_all = TRUE) 
 
-df <- df |> 
-  dplyr::left_join(df_avaliacao, by = "CD_PROGRAMA_IES") |> 
-  dplyr::select(-geom)
 
-df <- df |> sf::st_drop_geometry() |> as.data.frame()
+df <- base_capes_cnpq |> 
+  dplyr::mutate(NM_MUNICIPIO_PROGRAMA_IES = stringr::str_to_upper(
+    janitor::make_clean_names(NM_MUNICIPIO_PROGRAMA_IES, case = "sentence", allow_dupes = TRUE))) |> 
+  dplyr::left_join(df_pb, by = "NM_MUNICIPIO_PROGRAMA_IES") |> 
+  dplyr::left_join(df_avaliacao, by = "CD_PROGRAMA_IES") |> 
+  dplyr::select(-geom) |> 
+  sf::st_drop_geometry() |> 
+  as.data.frame() |> 
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+"))
+
+df |> mutate(id = row_number()) |> 
+  left_join(fapesq_discente |> 
+              dplyr::filter(!is.na(NR_DOCUMENTO_DISCENTE)), by = c("NR_DOCUMENTO_DISCENTE", 
+                                    "DS_GRAU_ACADEMICO_DISCENTE", 
+                                    "SG_ENTIDADE_ENSINO")) |> View()
+fapesq_discente |> View()
+
+
 
 df |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
-
-
-
-
-
-
-
-editais_fapesq |> group_by(EDITAL) |> summarise(bolsa = mean(VL_BOLSA_MES, na.rm = TRUE)) 
