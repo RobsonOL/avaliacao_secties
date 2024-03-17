@@ -116,7 +116,7 @@ df_bolsas <- bolsas_pb |>
   ) |>
   dplyr::rename(SG_ENTIDADE_ENSINO = SG_IES_ESTUDO) |>
   dplyr::mutate(
-    SG_PROGRAMA_CAPES = case_match(
+    SG_PROGRAMA_CAPES = dplyr::case_match(
       SG_PROGRAMA_CAPES,
       "DS" ~ "CAPES",
       "FAPESQ" ~ "CAPES_FAPESQ",
@@ -154,11 +154,11 @@ df_bolsas <- bolsas_pb |>
   dplyr::summarise(across(starts_with(c("QT_", "VL_")), sum, na.rm = TRUE)) |>
   dplyr::rename_with(~ stringr::str_remove(., "ANO_")) |> 
   dplyr::mutate(
-    BOLSA_APENAS_FAPESQ = case_when(
+    BOLSA_APENAS_FAPESQ = dplyr::case_when(
       QT_BOLSA_CAPES == 0 & QT_BOLSA_CAPES_FAPESQ > 0 & QT_BOLSA_OUTROS == 0 ~ 1,
       TRUE ~ 0
     ),
-    TIPO_BOLSA_MAIS_COMUM = case_when(
+    TIPO_BOLSA_MAIS_COMUM = dplyr::case_when(
       QT_BOLSA_CAPES > QT_BOLSA_CAPES_FAPESQ & QT_BOLSA_CAPES > QT_BOLSA_OUTROS ~ "CAPES",
       QT_BOLSA_CAPES_FAPESQ > QT_BOLSA_CAPES & QT_BOLSA_CAPES_FAPESQ > QT_BOLSA_OUTROS ~ "CAPES-FAPESQ",
       QT_BOLSA_OUTROS > QT_BOLSA_CAPES & QT_BOLSA_OUTROS > QT_BOLSA_CAPES_FAPESQ ~ "OUTROS",
@@ -280,7 +280,9 @@ fapesq_discente <- editais_fapesq |>
   dplyr::summarise(VL_BOLSA_FAPESQ = QT_BOLSA_FAPESQ * VL_BOLSA_MES,
                    QT_BOLSA_FAPESQ = sum(QT_BOLSA_FAPESQ, na.rm = TRUE)) |> 
   dplyr::ungroup() |> 
-  dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+"))
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+")) |> 
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+")) |> 
+  dplyr::mutate(CPF_DIGITOS = stringr::str_extract(NR_DOCUMENTO_DISCENTE, "\\d{3}"))
 
 
 
@@ -300,7 +302,7 @@ base_capes_cnpq <- base_capes |>
   dplyr::ungroup() |> 
   dplyr::mutate(across(starts_with('VL_BOLSA'), ~ ifelse(is.na(.), 0, .))) |>
   dplyr::mutate(
-    TIPO_BOLSA_MAIS_COMUM = case_when(
+    TIPO_BOLSA_MAIS_COMUM = dplyr::case_when(
       VL_BOLSA_CAPES > VL_BOLSA_CAPES_FAPESQ & VL_BOLSA_CAPES > VL_BOLSA_CNPQ &
         VL_BOLSA_CAPES > VL_BOLSA_OUTROS ~ "CAPES",
       VL_BOLSA_CAPES_FAPESQ > VL_BOLSA_CAPES &
@@ -344,15 +346,20 @@ df <- base_capes_cnpq |>
   dplyr::select(-geom) |> 
   sf::st_drop_geometry() |> 
   as.data.frame() |> 
-  dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+"))
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+")) |> 
+  dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+")) |> 
+  dplyr::mutate(CPF_DIGITOS = stringr::str_extract(NR_DOCUMENTO_DISCENTE, "\\d{3}"))
 
-df |> mutate(id = row_number()) |> 
+teste <- df |> mutate(id = row_number()) |> 
   left_join(fapesq_discente |> 
-              dplyr::filter(!is.na(NR_DOCUMENTO_DISCENTE)), by = c("NR_DOCUMENTO_DISCENTE", 
-                                    "DS_GRAU_ACADEMICO_DISCENTE", 
-                                    "SG_ENTIDADE_ENSINO")) |> View()
-fapesq_discente |> View()
-
+              dplyr::filter(!is.na(NR_DOCUMENTO_DISCENTE)), 
+            by = c(
+              "NM_DISCENTE", 
+              #"CPF_DIGITOS",
+              "DS_GRAU_ACADEMICO_DISCENTE", 
+              "SG_ENTIDADE_ENSINO"
+              )
+            ) 
 
 
 df |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
