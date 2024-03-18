@@ -279,10 +279,10 @@ fapesq_discente <- editais_fapesq |>
                   SG_ENTIDADE_ENSINO) |>
   dplyr::summarise(VL_BOLSA_FAPESQ = QT_BOLSA_FAPESQ * VL_BOLSA_MES,
                    QT_BOLSA_FAPESQ = sum(QT_BOLSA_FAPESQ, na.rm = TRUE)) |> 
-  dplyr::ungroup() |> 
-  dplyr::mutate(NM_DISCENTE_PRIMEIRO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+")) |> 
-  dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+")) |> 
-  dplyr::mutate(CPF_DIGITOS = stringr::str_extract(NR_DOCUMENTO_DISCENTE, "\\d{3}"))
+  dplyr::ungroup() 
+  # dplyr::mutate(NM_DISCENTE_PRIMEIRO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+")) |> 
+  # dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+")) |> 
+  # dplyr::mutate(CPF_DIGITOS = stringr::str_extract(NR_DOCUMENTO_DISCENTE, "\\d{3}"))
 
 
 
@@ -345,21 +345,65 @@ df <- base_capes_cnpq |>
   dplyr::left_join(df_avaliacao, by = "CD_PROGRAMA_IES") |> 
   dplyr::select(-geom) |> 
   sf::st_drop_geometry() |> 
-  as.data.frame() |> 
-  dplyr::mutate(NM_DISCENTE_PRIMEIRO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+")) |> 
-  dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+")) |> 
-  dplyr::mutate(CPF_DIGITOS = stringr::str_extract(NR_DOCUMENTO_DISCENTE, "\\d{3}"))
+  as.data.frame() 
+  # dplyr::mutate(NM_DISCENTE_PRIMEIRO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+")) |> 
+  # dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+")) |> 
+  # dplyr::mutate(CPF_DIGITOS = stringr::str_extract(NR_DOCUMENTO_DISCENTE, "\\d{3}"))
 
-teste <- df |> mutate(id = row_number()) |> 
-  left_join(fapesq_discente |> 
-              dplyr::filter(!is.na(NR_DOCUMENTO_DISCENTE)), 
+df_fapesq <- df |> mutate(id = row_number()) |> 
+  left_join(fapesq_discente, ## |> dplyr::filter(!is.na(NR_DOCUMENTO_DISCENTE)), 
             by = c(
               "NM_DISCENTE", 
               #"CPF_DIGITOS",
               "DS_GRAU_ACADEMICO_DISCENTE", 
               "SG_ENTIDADE_ENSINO"
               )
-            ) 
+            ) |> 
+  dplyr::mutate(VL_BOLSA_TOTAL = 0) |>
+  dplyr::rowwise() |>
+  dplyr::mutate(VL_BOLSA_TOTAL = sum(c_across(starts_with('VL_BOLSA')), na.rm = TRUE)) |>
+  dplyr::ungroup() |> 
+  dplyr::mutate(across(starts_with('VL_BOLSA'), ~ ifelse(is.na(.), 0, .))) |>
+  dplyr::mutate(
+    TIPO_BOLSA_MAIS_COMUM = dplyr::case_when(
+      VL_BOLSA_CAPES > VL_BOLSA_CAPES_FAPESQ & VL_BOLSA_CAPES > VL_BOLSA_CNPQ &
+        VL_BOLSA_CAPES > VL_BOLSA_OUTROS & VL_BOLSA_CAPES > VL_BOLSA_FAPESQ ~ "CAPES",
+      VL_BOLSA_CAPES_FAPESQ > VL_BOLSA_CAPES &
+        VL_BOLSA_CAPES_FAPESQ > VL_BOLSA_CNPQ &
+        VL_BOLSA_CAPES_FAPESQ > VL_BOLSA_OUTROS &
+        VL_BOLSA_CAPES_FAPESQ > VL_BOLSA_FAPESQ ~ "CAPES - FAPESQ",
+      VL_BOLSA_OUTROS > VL_BOLSA_CAPES &
+        VL_BOLSA_OUTROS > VL_BOLSA_CNPQ &
+        VL_BOLSA_OUTROS > VL_BOLSA_CAPES_FAPESQ &
+        VL_BOLSA_OUTROS > VL_BOLSA_FAPESQ ~ "OUTROS",
+      VL_BOLSA_CNPQ > VL_BOLSA_CAPES &
+        VL_BOLSA_CNPQ > VL_BOLSA_CAPES_FAPESQ &
+        VL_BOLSA_CNPQ > VL_BOLSA_OUTROS &
+        VL_BOLSA_CNPQ > VL_BOLSA_FAPESQ ~ "CNPQ",
+      VL_BOLSA_FAPESQ > VL_BOLSA_CAPES &
+        VL_BOLSA_FAPESQ > VL_BOLSA_CAPES_FAPESQ &
+        VL_BOLSA_FAPESQ > VL_BOLSA_OUTROS &
+        VL_BOLSA_FAPESQ > VL_BOLSA_CAPES &
+        VL_BOLSA_FAPESQ > VL_BOLSA_CNPQ ~ "FAPESQ",
+      TRUE ~ "MÚLTIPLAS BOLSAS"
+    )
+  ) |>
+  dplyr::mutate(TIPO_BOLSA_MAIS_COMUM = ifelse(VL_BOLSA_TOTAL == 0, "SEM BOLSA", TIPO_BOLSA_MAIS_COMUM)) |>
+  dplyr::filter(TIPO_BOLSA_MAIS_COMUM != "MÚLTIPLAS BOLSAS") |>
+  dplyr::filter(VL_BOLSA_TOTAL < 150000) |> 
+  dplyr::select(-NR_DOCUMENTO_DISCENTE.y) |> 
+  dplyr::rename(NR_DOCUMENTO_DISCENTE = NR_DOCUMENTO_DISCENTE.x) |> 
+  # Estudante sem merge: possuem informações na fapesq mas sucupira ainda não informou
+  dplyr::bind_rows(
+    fapesq_discente |> 
+      dplyr::filter(!NM_DISCENTE %in% df_fapesq$NM_DISCENTE) |> 
+      dplyr::mutate(TIPO_BOLSA_MAIS_COMUM = "FAPESQ")
+  )
+
+  
 
 
-df |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
+
+
+
+df_fapesq |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
