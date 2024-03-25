@@ -12,6 +12,7 @@ fapesq |> readr::write_rds("dados/tidy/fapesq_pos_doutorado.rds")
 cnpq <- read_rds("dados/tidy/bolsas_cnpq_pb.rds") |>
   dplyr::filter(DS_GRAU_ACADEMICO_DISCENTE == "POS-DOUTORADO") |>
   dplyr::group_by(NM_DISCENTE,
+                  ANO,
                   TIPO_BOLSA,
                   DS_GRAU_ACADEMICO_DISCENTE,
                   SG_ENTIDADE_ENSINO) |>

@@ -324,11 +324,11 @@ base_capes_cnpq <- base_capes |>
 
 
 
-df_pb <- geobr::read_municipality(code_muni = "PB", year = 2010) |> dplyr::select(code_muni, name_muni) |>
-  dplyr::mutate(name_muni = stringr::str_to_upper(
-    janitor::make_clean_names(name_muni, case = "sentence", allow_dupes = TRUE))) |>
-  dplyr::rename(NM_MUNICIPIO_PROGRAMA_IES = name_muni,
-                CD_MUNICIPIO_PROGRAMA_IES = code_muni)
+# df_pb <- geobr::read_municipality(code_muni = "PB", year = 2010) |> dplyr::select(code_muni, name_muni) |>
+#   dplyr::mutate(name_muni = stringr::str_to_upper(
+#     janitor::make_clean_names(name_muni, case = "sentence", allow_dupes = TRUE))) |>
+#   dplyr::rename(NM_MUNICIPIO_PROGRAMA_IES = name_muni,
+#                 CD_MUNICIPIO_PROGRAMA_IES = code_muni)
 
 df_avaliacao <- discentes_pb |> 
   dplyr::distinct(CD_PROGRAMA_IES, CD_CONCEITO_PROGRAMA) |> 
@@ -341,7 +341,7 @@ df_avaliacao <- discentes_pb |>
 df <- base_capes_cnpq |> 
   dplyr::mutate(NM_MUNICIPIO_PROGRAMA_IES = stringr::str_to_upper(
     janitor::make_clean_names(NM_MUNICIPIO_PROGRAMA_IES, case = "sentence", allow_dupes = TRUE))) |> 
-  dplyr::left_join(df_pb, by = "NM_MUNICIPIO_PROGRAMA_IES") |> 
+  # dplyr::left_join(df_pb, by = "NM_MUNICIPIO_PROGRAMA_IES") |> 
   dplyr::left_join(df_avaliacao, by = "CD_PROGRAMA_IES") |> 
   dplyr::select(-geom) |> 
   sf::st_drop_geometry() |> 
@@ -361,9 +361,9 @@ df_fapesq <- df |> mutate(id = row_number()) |>
             ) |> 
   dplyr::mutate(VL_BOLSA_TOTAL = 0) |>
   dplyr::rowwise() |>
-  dplyr::mutate(VL_BOLSA_TOTAL = sum(c_across(starts_with('VL_BOLSA')), na.rm = TRUE)) |>
+  dplyr::mutate(VL_BOLSA_TOTAL = sum(dplyr::c_across(dplyr::starts_with('VL_BOLSA')), na.rm = TRUE)) |>
   dplyr::ungroup() |> 
-  dplyr::mutate(across(starts_with('VL_BOLSA'), ~ ifelse(is.na(.), 0, .))) |>
+  dplyr::mutate(dplyr::across(dplyr::starts_with('VL_BOLSA'), ~ ifelse(is.na(.), 0, .))) |>
   dplyr::mutate(
     TIPO_BOLSA_MAIS_COMUM = dplyr::case_when(
       VL_BOLSA_CAPES > VL_BOLSA_CAPES_FAPESQ & VL_BOLSA_CAPES > VL_BOLSA_CNPQ &
