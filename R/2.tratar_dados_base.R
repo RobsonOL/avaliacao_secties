@@ -324,11 +324,11 @@ base_capes_cnpq <- base_capes |>
 
 
 
-df_pb <- geobr::read_municipality(code_muni = "PB", year = 2010) |> dplyr::select(code_muni, name_muni) |>
-  dplyr::mutate(name_muni = stringr::str_to_upper(
-    janitor::make_clean_names(name_muni, case = "sentence", allow_dupes = TRUE))) |>
-  dplyr::rename(NM_MUNICIPIO_PROGRAMA_IES = name_muni,
-                CD_MUNICIPIO_PROGRAMA_IES = code_muni)
+# df_pb <- geobr::read_municipality(code_muni = "PB", year = 2010) |> dplyr::select(code_muni, name_muni) |>
+#   dplyr::mutate(name_muni = stringr::str_to_upper(
+#     janitor::make_clean_names(name_muni, case = "sentence", allow_dupes = TRUE))) |>
+#   dplyr::rename(NM_MUNICIPIO_PROGRAMA_IES = name_muni,
+#                 CD_MUNICIPIO_PROGRAMA_IES = code_muni)
 
 df_avaliacao <- discentes_pb |> 
   dplyr::distinct(CD_PROGRAMA_IES, CD_CONCEITO_PROGRAMA) |> 

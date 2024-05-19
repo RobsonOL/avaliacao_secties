@@ -728,6 +728,7 @@ editais_fapesq <- bind_rows(df1, df2, df3, df4, df5, df6, df7) |>
 editais_fapesq |> readr::write_rds("dados/tidy/editais_fapesq.rds")
 editais_fapesq |> readr::write_csv("dados/tidy/editais_fapesq.csv")
 
+editais_fapesq |> count(lubridate::year(INICIO_BOLSA))
 
 ## Produção Intelectual da Paraíba ----
 
