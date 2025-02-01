@@ -259,7 +259,7 @@ base_capes <- df_discentes_bolsa_tese |>
   dplyr::mutate(NM_DISSERTACAO_TESE = dplyr::na_if(NM_DISSERTACAO_TESE, "NA"))
     
 
-## Adicionar bolsas CNPQ & FAPESQ ----
+## Adicionar bolsas CNPQ ----
 cnpq_discente <- cnpq_pb |> dplyr::group_by(NM_DISCENTE,
                                          TIPO_BOLSA,
                                          DS_GRAU_ACADEMICO_DISCENTE,
@@ -267,23 +267,6 @@ cnpq_discente <- cnpq_pb |> dplyr::group_by(NM_DISCENTE,
   dplyr::summarise(VL_BOLSA_ANO = sum(VL_BOLSA_ANO, na.rm = TRUE)) |> 
   dplyr::ungroup() |> 
   dplyr::rename(VL_BOLSA_CNPQ = VL_BOLSA_ANO) 
-
-
-fapesq_discente <- editais_fapesq |>
-  dplyr::filter(EDITAL != "Edital 03/2016") |> 
-  dplyr::filter(DS_GRAU_ACADEMICO_DISCENTE %in% c("MESTRADO", "DOUTORADO")) |> 
-  dplyr::group_by(NM_DISCENTE,
-                  DS_GRAU_ACADEMICO_DISCENTE,
-                  EDITAL,
-                  NR_DOCUMENTO_DISCENTE,
-                  SG_ENTIDADE_ENSINO) |>
-  dplyr::summarise(VL_BOLSA_FAPESQ = QT_BOLSA_FAPESQ * VL_BOLSA_MES,
-                   QT_BOLSA_FAPESQ = sum(QT_BOLSA_FAPESQ, na.rm = TRUE)) |> 
-  dplyr::ungroup() 
-  # dplyr::mutate(NM_DISCENTE_PRIMEIRO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+")) |> 
-  # dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+")) |> 
-  # dplyr::mutate(CPF_DIGITOS = stringr::str_extract(NR_DOCUMENTO_DISCENTE, "\\d{3}"))
-
 
 
 base_capes_cnpq <- base_capes |>
@@ -330,6 +313,34 @@ base_capes_cnpq <- base_capes |>
 #   dplyr::rename(NM_MUNICIPIO_PROGRAMA_IES = name_muni,
 #                 CD_MUNICIPIO_PROGRAMA_IES = code_muni)
 
+
+
+## Adicionar bolsas FAPESQ ----
+
+# editais_fapesq <- editais_fapesq |> 
+#   mutate(INICIO_BOLSA = as.Date(INICIO_BOLSA), FIM_BOLSA = as.Date(FIM_BOLSA)) |> 
+#   mutate(INICIO_BOLSA = lubridate::year(INICIO_BOLSA), FIM_BOLSA = lubridate::year(FIM_BOLSA)) |> 
+#   filter(!is.na(INICIO_BOLSA) & !is.na(FIM_BOLSA)) |>
+#   transmute(NM_DISCENTE, DS_GRAU_ACADEMICO_DISCENTE, ANO = map2(INICIO_BOLSA, FIM_BOLSA, seq)) |>
+#   unnest(cols = ANO) |> 
+#   distinct()
+
+fapesq_discente <- editais_fapesq |>
+  dplyr::filter(EDITAL != "Edital 03/2016") |> 
+  dplyr::filter(DS_GRAU_ACADEMICO_DISCENTE %in% c("MESTRADO", "DOUTORADO")) |> 
+  dplyr::group_by(NM_DISCENTE,
+                  DS_GRAU_ACADEMICO_DISCENTE,
+                  EDITAL,
+                  NR_DOCUMENTO_DISCENTE,
+                  SG_ENTIDADE_ENSINO) |>
+  dplyr::summarise(VL_BOLSA_FAPESQ = QT_BOLSA_FAPESQ * VL_BOLSA_MES,
+                   QT_BOLSA_FAPESQ = sum(QT_BOLSA_FAPESQ, na.rm = TRUE)) |> 
+  dplyr::ungroup() 
+# dplyr::mutate(NM_DISCENTE_PRIMEIRO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+")) |> 
+# dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+")) |> 
+# dplyr::mutate(CPF_DIGITOS = stringr::str_extract(NR_DOCUMENTO_DISCENTE, "\\d{3}"))
+
+
 df_avaliacao <- discentes_pb |> 
   dplyr::distinct(CD_PROGRAMA_IES, CD_CONCEITO_PROGRAMA) |> 
   dplyr::mutate(CD_CONCEITO_PROGRAMA = ifelse(
@@ -342,10 +353,10 @@ df <- base_capes_cnpq |>
   dplyr::mutate(NM_MUNICIPIO_PROGRAMA_IES = stringr::str_to_upper(
     janitor::make_clean_names(NM_MUNICIPIO_PROGRAMA_IES, case = "sentence", allow_dupes = TRUE))) |> 
   # dplyr::left_join(df_pb, by = "NM_MUNICIPIO_PROGRAMA_IES") |> 
-  dplyr::left_join(df_avaliacao, by = "CD_PROGRAMA_IES") |> 
-  dplyr::select(-geom) |> 
-  sf::st_drop_geometry() |> 
-  as.data.frame() 
+  dplyr::left_join(df_avaliacao, by = "CD_PROGRAMA_IES")
+  #dplyr::select(-geom) |> 
+  #sf::st_drop_geometry() |> 
+  #as.data.frame() 
   # dplyr::mutate(NM_DISCENTE_PRIMEIRO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+")) |> 
   # dplyr::mutate(NM_DISCENTE_PRIMEIRO_SEGUNDO_NM = stringr::str_extract(NM_DISCENTE, "^[A-Z]+\\s[A-Z]+")) |> 
   # dplyr::mutate(CPF_DIGITOS = stringr::str_extract(NR_DOCUMENTO_DISCENTE, "\\d{3}"))
@@ -392,7 +403,9 @@ df_fapesq <- df |> mutate(id = row_number()) |>
   dplyr::filter(TIPO_BOLSA_MAIS_COMUM != "MÚLTIPLAS BOLSAS") |>
   dplyr::filter(VL_BOLSA_TOTAL < 150000) |> 
   dplyr::select(-NR_DOCUMENTO_DISCENTE.y) |> 
-  dplyr::rename(NR_DOCUMENTO_DISCENTE = NR_DOCUMENTO_DISCENTE.x) |> 
+  dplyr::rename(NR_DOCUMENTO_DISCENTE = NR_DOCUMENTO_DISCENTE.x)
+
+df_fapesq <- df_fapesq |> 
   # Estudante sem merge: possuem informações na fapesq mas sucupira ainda não informou
   dplyr::bind_rows(
     fapesq_discente |> 
@@ -407,3 +420,4 @@ df_fapesq <- df |> mutate(id = row_number()) |>
 
 
 df_fapesq |> write_rds("dados/tidy/discentes_bolsa_tese_pub.rds")
+df_fapesq |> write_csv2("dados/tidy/discentes_bolsa_tese_pub.csv")

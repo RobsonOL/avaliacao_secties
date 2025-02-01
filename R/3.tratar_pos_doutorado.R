@@ -40,7 +40,7 @@ fapesq_artigos <- fapesq |>
 
 fapesq_artigos|> readr::write_rds("dados/tidy/fapesq_pos_doutorado.rds")
 
-
+fapesq_artigos |> readr::write_csv("dados/tidy/fapesq_pos_doutorado.csv")
 
 
 
@@ -110,6 +110,3 @@ df <- fapesq |>
   dplyr::bind_rows(cnpq) |>
   dplyr::bind_rows(capes)
 
-
-df |> 
-  group_by(TIPO_BOLSA) |> slice(1) |> View()

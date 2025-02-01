@@ -5,6 +5,8 @@ rm(list = ls())
 fapesq_path <- "dados/bruto/Informações editais de bolsas de mestrado, doutorado e pós-doutorado - FAPESQ.xlsx"
 fapesq_sheets <- readxl::excel_sheets(fapesq_path)
 
+discentes_pb <- readr::read_rds("dados/tidy/discentes_pb.rds")
+bolsas_pb <- readr::read_rds("dados/tidy/bolsas_pb.rds") 
 
 ###### Edital 0320216 ----
 
@@ -294,7 +296,7 @@ editais_fapesq <- bind_rows(df1, df2, df3, df4, df5, df6, df7) |>
 # Contagem de Bolsistas
 
 
-editais_fapesq |> 
+bolsas_fapesq_ano <- editais_fapesq |> 
   mutate(INICIO_BOLSA = as.Date(INICIO_BOLSA), FIM_BOLSA = as.Date(FIM_BOLSA)) |> 
   mutate(INICIO_BOLSA = lubridate::year(INICIO_BOLSA), FIM_BOLSA = lubridate::year(FIM_BOLSA)) |> 
   filter(!is.na(INICIO_BOLSA) & !is.na(FIM_BOLSA)) |>
@@ -308,3 +310,48 @@ editais_fapesq |>
   rename(DS_NIVEL = DS_GRAU_ACADEMICO_DISCENTE) |> 
   rename(BOLSISTAS = n)
 
+discentes_pb <- discentes_pb |> 
+  dplyr::mutate(
+    SG_ENTIDADE_ENSINO = case_match(SG_ENTIDADE_ENSINO,
+                                    "UFPB-JP" ~ "UFPB",
+                                    "UFPB-AREIA" ~ "UFPB",
+                                    "UNIPÊ" ~ "UNIPE",
+                                    "UFPB-RT" ~ "UFPB",
+                                    "CCA" ~ "UFPB",
+                                    .default = as.character(SG_ENTIDADE_ENSINO)))
+
+x <- editais_fapesq |>
+  dplyr::filter(DS_GRAU_ACADEMICO_DISCENTE != "POS-DOUTORADO") |> 
+  dplyr::filter(lubridate::year(INICIO_BOLSA) <= 2022) |> 
+  dplyr::left_join(
+    discentes_pb,
+    by = c(
+      "NM_DISCENTE",
+      "DS_GRAU_ACADEMICO_DISCENTE",
+      "SG_ENTIDADE_ENSINO"
+    )
+  ) |> 
+  dplyr::select(
+    ANO, NM_DISCENTE, DS_GRAU_ACADEMICO_DISCENTE, SG_ENTIDADE_ENSINO,
+    INICIO_BOLSA, FIM_BOLSA, EDITAL, GENERO, 
+    NM_PROGRAMA_IES.y, VL_BOLSA_MES, NM_AREA_AVALIACAO,
+    NM_ENTIDADE_ENSINO 
+  )|> distinct() |> 
+  dplyr::filter(!is.na(ANO)) |> 
+  dplyr::rename(NM_PROGRAMA_IES = NM_PROGRAMA_IES.y) 
+
+
+x |> readr::write_csv("dados/tidy/bolsas_mestrado_doutorado_fapesq.csv")
+
+
+pos_doc <- editais_fapesq |> 
+  filter(DS_GRAU_ACADEMICO_DISCENTE == "POS-DOUTORADO") |> 
+  mutate(INICIO_BOLSA = as.Date(INICIO_BOLSA), FIM_BOLSA = as.Date(FIM_BOLSA)) |> 
+  mutate(INICIO_BOLSA = lubridate::year(INICIO_BOLSA), FIM_BOLSA = lubridate::year(FIM_BOLSA)) |> 
+  filter(!is.na(INICIO_BOLSA) & !is.na(FIM_BOLSA)) |>
+  transmute(NM_DISCENTE, DS_GRAU_ACADEMICO_DISCENTE, NM_PROGRAMA_IES, SG_ENTIDADE_ENSINO, ANO = map2(INICIO_BOLSA, FIM_BOLSA, seq)) |>
+  unnest(cols = ANO) |> 
+  distinct() |> 
+  relocate(ANO, .before = NM_DISCENTE)
+
+pos_doc |> readr::write_csv("dados/tidy/bolsas_pos_doc_fapesq.csv")

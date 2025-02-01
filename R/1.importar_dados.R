@@ -15,9 +15,9 @@ PATH_DISCENTES <- paste0(PATH_DADOS, "discentes/")
 
 discentes <- list.files(path = PATH_DISCENTES, 
                         pattern = "*.zip", full.names = TRUE) |>  
-  map_df(vroom, delim = ";", locale = locale(encoding = 'latin5'), col_types = cols(.default = "c")) 
+  purrr::map_df(vroom::vroom, delim = ";", locale = vroom::locale(encoding = 'latin5'), col_types = vroom::cols(.default = "c")) 
 
-discentes |> write_rds(paste0(PATH_DADOS, "discentes.rds"))
+discentes |> readr::write_rds(paste0(PATH_DADOS, "discentes.rds"))
 
 ##### Teses e dissertações de discentes de Pós-Graduação ---------------------------
 # https://dadosabertos.capes.gov.br/dataset/2017-2020-catalogo-de-teses-e-dissertacoes-da-capes
@@ -433,9 +433,8 @@ cnpq |>  write_rds("dados/tidy/bolsas_cnpq_pb.rds")
 
 
 ## Bolsas FAPESQ -----
-fapesq_path <- "dados/bruto/Informações editais de bolsas de mestrado, doutorado e pós-doutorado - FAPESQ.xlsx"
+fapesq_path <- "dados/bruto/fapesq/Informações editais de bolsas de mestrado, doutorado e pós-doutorado - FAPESQ.xlsx"
 fapesq_sheets <- readxl::excel_sheets(fapesq_path)
-
 
 ###### Edital 0320216 ----
 
@@ -462,7 +461,7 @@ df1 <-
   ) |> 
   dplyr::mutate(
     TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
-  )
+  ) 
 
 ###### Edital 072018 ----
 df2 <-
@@ -526,7 +525,8 @@ df3 <-
                                                         "BLD-PDRP-Pós-Doutorado no País" ~ "POS-DOUTORADO")) |> 
   dplyr::mutate(
     TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
-  )
+  )|> 
+  dplyr::mutate(NR_DOCUMENTO_DISCENTE = as.character(NR_DOCUMENTO_DISCENTE))
 
 
 ###### Edital 16/2022 ----
@@ -564,7 +564,8 @@ df4 <-
   select(-`...15`) |> 
   dplyr::mutate(
     TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
-  )
+  )|> 
+  dplyr::mutate(NR_DOCUMENTO_DISCENTE = as.character(NR_DOCUMENTO_DISCENTE))
 
 
 ###### Edital 17/2022 ----
@@ -601,7 +602,8 @@ df5 <-
                                                         "BLD-PDRP-Pós-Doutorado no País" ~ "POS-DOUTORADO")) |> 
   dplyr::mutate(
     TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
-  )
+  )|> 
+  dplyr::mutate(NR_DOCUMENTO_DISCENTE = as.character(NR_DOCUMENTO_DISCENTE))
 
 
 ###### Edital 08/2023 ----
@@ -639,7 +641,8 @@ df6 <-
                                                         "BLD-PDRP-Pós-Doutorado no País" ~ "POS-DOUTORADO")) |> 
   dplyr::mutate(
     TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
-  )
+  )|> 
+  dplyr::mutate(NR_DOCUMENTO_DISCENTE = as.character(NR_DOCUMENTO_DISCENTE))
 
 
 
@@ -678,12 +681,50 @@ df7 <-
                                                         "BLD-PDRP-Pós-Doutorado no País" ~ "POS-DOUTORADO")) |> 
   dplyr::mutate(
     TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
-  )
+  )|> 
+  dplyr::mutate(NR_DOCUMENTO_DISCENTE = as.character(NR_DOCUMENTO_DISCENTE))
+
+
+##### EDITAL 11/2023 ----------
+df8 <-
+  readxl::read_excel(fapesq_path, sheet = fapesq_sheets[[8L]]) |>
+  dplyr::rename(
+    NM_DISCENTE = Bolsista,
+    NM_SITUACAO_DISCENTE = Situacao,
+    DS_GRAU_ACADEMICO_DISCENTE = "Modalidade/Nível",
+    NR_DOCUMENTO_DISCENTE = "CPF Bolsista",
+    SG_ENTIDADE_ENSINO = "Instituição",
+    INICIO_BOLSA = "Início Bolsa",
+    FIM_BOLSA = "Término Bolsa",
+    EDITAL = Edital,
+    COORDENADOR = "Coordenador"
+  ) |> 
+  dplyr::mutate(EDITAL = "Edital 08/2023",
+                GENERO = genderBR::get_gender(NM_DISCENTE)) |> 
+  dplyr::mutate(GENERO = case_match(GENERO,
+                                    "Female" ~ "FEMININO",
+                                    "Male" ~ "MASCULINO")) |> 
+  dplyr::mutate(across(
+    c(NM_DISCENTE, SG_ENTIDADE_ENSINO, COORDENADOR),
+    ~ janitor::make_clean_names(.x, case = "sentence", allow_dupes = TRUE, ascii = TRUE) |> toupper()
+  )) |> 
+  dplyr::mutate(DS_GRAU_ACADEMICO_DISCENTE = case_match(DS_GRAU_ACADEMICO_DISCENTE,
+                                                        "BLD-DRP-Doutorado no país" ~ "DOUTORADO",
+                                                        "BLD-MSP-Mestrado no País" ~ "MESTRADO",
+                                                        "BLD-PDRP-Pós-Doutorado no País" ~ "POS-DOUTORADO")) |> 
+  dplyr::mutate(
+    TIPO_BOLSA_MAIS_COMUM = "FAPESQ - EDITAL"
+  )|> 
+  dplyr::mutate(NR_DOCUMENTO_DISCENTE = as.character(NR_DOCUMENTO_DISCENTE))
 
 
 
 
-editais_fapesq <- bind_rows(df1, df2, df3, df4, df5, df6, df7) |> 
+
+
+# UNIR BASES ----------
+
+editais_fapesq <- bind_rows(df1, df2, df3, df4, df5, df6, df7, df8) |> 
   dplyr::mutate(NR_DOCUMENTO_DISCENTE = str_replace_all(NR_DOCUMENTO_DISCENTE, "[.]", "")) |> 
   dplyr::mutate(NR_DOCUMENTO_DISCENTE = str_replace_all(NR_DOCUMENTO_DISCENTE, "-", "")) |> 
   dplyr::mutate(NR_DOCUMENTO_DISCENTE = ifelse(is.na(NR_DOCUMENTO_DISCENTE), NA, 
