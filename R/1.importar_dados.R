@@ -345,31 +345,54 @@ colunas_selecionadas <- c("ano_referencia", "beneficiario", "linha_de_fomento", 
                           "sigla_uf_destino", "instituicao_origem", "sigla_instituicao_destino", "valor_pago")
 
 colunas_numericas <- c("ano_referencia", "valor_pago")
-
 cnpq_2017 <-
-  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2017.zip")) |> janitor::clean_names() |>
+  readr::read_delim(paste0(DADOS_CNPQ, "investimentos_cnpq_2017.zip"), 
+                    delim = ";", locale = readr::locale(decimal_mark = ",")) |> 
+  janitor::clean_names() |>
   dplyr::select(all_of(colunas_selecionadas)) |> 
   dplyr::mutate(across(colunas_numericas, as.numeric))
+
 cnpq_2018 <-
-  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2018.zip")) |> janitor::clean_names() |>
+  readr::read_delim(paste0(DADOS_CNPQ, "investimentos_cnpq_2018.zip"), 
+                    delim = ",", locale = readr::locale(decimal_mark = ",")) |> 
+  janitor::clean_names() |>
   dplyr::select(all_of(colunas_selecionadas)) |> 
   dplyr::mutate(across(colunas_numericas, as.numeric))
+
 cnpq_2019 <-
-  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2019.zip")) |> janitor::clean_names() |>
+  readr::read_delim(paste0(DADOS_CNPQ, "investimentos_cnpq_2019.zip"), 
+                    delim = ",", locale = readr::locale(decimal_mark = ",")) |> 
+  janitor::clean_names() |>
   dplyr::select(all_of(colunas_selecionadas)) |> 
   dplyr::mutate(across(colunas_numericas, as.numeric))
+
 cnpq_2020 <-
-  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2020.zip")) |> janitor::clean_names() |>
-  select(-1) |> dplyr::select(all_of(colunas_selecionadas)) |> 
+  readr::read_delim(paste0(DADOS_CNPQ, "investimentos_cnpq_2020.zip"), 
+                    delim=";",
+                    locale = readr::locale(decimal_mark = ',')) |> 
+  janitor::clean_names() |>
+  select(-1) |> 
+  dplyr::select(all_of(colunas_selecionadas)) |> 
   dplyr::mutate(across(colunas_numericas, as.numeric))
+
 cnpq_2021 <-
-  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2021.zip")) |> janitor::clean_names() |>
+  readr::read_delim(paste0(DADOS_CNPQ, "investimentos_cnpq_2021.zip"),
+                    delim = ";",
+                    locale = readr::locale(decimal_mark = ",")) |> 
+  janitor::clean_names() |>
   dplyr::select(all_of(colunas_selecionadas)) |> 
   dplyr::mutate(across(colunas_numericas, as.numeric))
+
 cnpq_2022 <-
-  vroom(paste0(DADOS_CNPQ, "investimentos_cnpq_2022.zip"), skip = 5) |> janitor::clean_names() |>
+  readr::read_delim(paste0(DADOS_CNPQ, "investimentos_cnpq_2022.zip"), 
+                    skip = 5,
+                    delim = ",",
+                    locale=readr::locale(decimal_mark=",")) |> 
+  janitor::clean_names() |>
+  dplyr::mutate(valor_pago = readr::parse_number(valor_pago, locale = readr::locale(decimal_mark = ","))) |> 
   dplyr::select(all_of(colunas_selecionadas)) |> 
-  dplyr::mutate(across(colunas_numericas, as.numeric))
+  dplyr::mutate(across(colunas_numericas, as.numeric)) |> 
+  dplyr::filter(!is.na(ano_referencia))
 
 modalidades_cnpq <- c("GD - Doutorado", "GM - Mestrado", 
                       "PDJ - Pós-doutorado Júnior", "GDE - Doutorado no Exterior",
