@@ -85,7 +85,9 @@ teses_dissertacoes_2013_2022 <- teses_dissertacoes_2013_2022 |>
   -CD_PROGRAMA), as.numeric))
 
 
-teses_dissertacoes <- teses_dissertacoes_2013_2022 # %>% bind_rows(teses_dissertacoes_2010_2012) 
+teses_dissertacoes <- teses_dissertacoes_2013_2024
+  # %>% bind_rows(teses_dissertacoes_2010_2012) 
+
 
 
 
