@@ -207,11 +207,11 @@ discentes_pb <- discentes |>
     c(AN_BASE, CD_AREA_AVALIACAO, AN_NASCIMENTO_DISCENTE,
       # AN_MATRICULA_DISCENTE, ME_MATRICULA_DISCENTE,
       ID_PESSOA),
-    as.numeric
+    \(x) as.numeric(x)
   )) |> 
   filter(SG_UF_PROGRAMA == "PB") |>
-  mutate(across(c(DT_MATRICULA_DISCENTE), parse_date_time, "%d%b%y:%H:%M:%S")) |>
-  mutate(across(c(DT_SITUACAO_DISCENTE), parse_date_time, "%d%b%y:%H:%M:%S")) |>
+  mutate(across(c(DT_MATRICULA_DISCENTE), \(x) parse_date_time(x, "%d%b%y:%H:%M:%S"))) |>
+  mutate(across(c(DT_SITUACAO_DISCENTE), \(x) parse_date_time(x, "%d%b%y:%H:%M:%S"))) |>
   mutate(IDADE = AN_BASE - AN_NASCIMENTO_DISCENTE) |>
   # As linhas abaixo são para a inclusão das bases anteriores a 2012:
   # mutate(DT_SITUACAO_DISCENTE = if_else(AN_BASE <= 2012,
@@ -248,18 +248,24 @@ discentes_pb <- discentes |>
   #     # NM_NIVEL_TITULACAO_DISCENTE
   #   )
   # ) |>
-  mutate(across(where(is.character), ~ na_if(., "NI"))) |>
+  mutate(across(where(is.character), \(x) na_if(x, "NI"))) |>
   rename(ANO = AN_BASE) |>
   relocate(IDADE, .after = AN_NASCIMENTO_DISCENTE) |>
   mutate(
     SG_ENTIDADE_ENSINO = case_match(
       SG_ENTIDADE_ENSINO,
-      "UFPB/J.P." ~ "UFPB-JP",
-      "UFPB/RT" ~ "UFPB-RT",
-      "UFPB/AREIA" ~ "UFPB-AREIA",
+      "UFPB/J.P." ~ "UFPB",
+      "UFPB/RT" ~ "UFPB",
+      "UFPB/AREIA" ~ "UFPB",
+      "UFPB-JP" ~ "UFPB",
+      "UFPB-RT" ~ "UFPB",
+      "UNIPÊ" ~ "UNIPE",
       .default = SG_ENTIDADE_ENSINO
     )
   ) |>
+  dplyr::mutate(SG_ENTIDADE_ENSINO = stringr::str_to_upper(
+    janitor::make_clean_names(SG_ENTIDADE_ENSINO, case = "sentence", allow_dupes = TRUE)
+  )) |> 
   dplyr::mutate(NM_DISCENTE = stringr::str_to_upper(
     janitor::make_clean_names(NM_DISCENTE, case = "sentence", allow_dupes = TRUE)
   )) |> 
@@ -272,7 +278,6 @@ discentes_pb <- discentes |>
     .default = DS_GRAU_ACADEMICO_DISCENTE
   ))
   
-
 
 discentes_pb |> write_rds("dados/tidy/discentes_pb.rds")
 

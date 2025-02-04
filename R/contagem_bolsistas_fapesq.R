@@ -294,7 +294,7 @@ editais_fapesq <- bind_rows(df1, df2, df3, df4, df5, df6, df7) |>
 
 
 # Contagem de Bolsistas
-
+editais_fapesq <- readr::read_rds("dados/tidy/editais_fapesq.rds")
 
 bolsas_fapesq_ano <- editais_fapesq |> 
   mutate(INICIO_BOLSA = as.Date(INICIO_BOLSA), FIM_BOLSA = as.Date(FIM_BOLSA)) |> 
