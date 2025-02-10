@@ -53,3 +53,10 @@ discentes <- read_rds(paste0(PATH_DADOS, "discentes.rds"))
 
 discentes |> 
   select(NM_DISCENTE, AN_BASE, SG_ENTIDADE_ENSINO, DS_GRAU_ACADEMICO_DISCENTE, NM_PROGRAMA_IES) |> View()
+  unnest(cols = c(ANO))  
+
+
+bolsistas_fapesq |> 
+  dplyr::left_join(discentes_pb, by = c("NM_DISCENTE", "SG_ENTIDADE_ENSINO", "DS_GRAU_ACADEMICO_DISCENTE", "ANO", "NR_DOCUMENTO_DISCENTE")) |> View()
+
+discentes_pb |> count(SG_ENTIDADE_ENSINO)
